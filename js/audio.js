@@ -44,9 +44,19 @@
   /* precisa de um gesto do usuario para sair do estado suspended */
   Snd.unlock = function () {
     const c = ac();
-    if (c && c.state === 'suspended') c.resume();
-    if (c) loadDialup();   /* baixa a gravacao antes do login */
+    if (!c) return;
+    loadDialup();
+    if (c.state === 'suspended') {
+      const p = c.resume();
+      if (p && p.then) p.then(flushPending, function () { }); else flushPending();
+    } else {
+      flushPending();
+    }
   };
+
+  /* cria o contexto e comeca a baixar a gravacao antes de qualquer
+     gesto; o contexto nasce suspenso e so soa depois do unlock */
+  Snd.preload = function () { if (ac()) loadDialup(); };
 
   Snd.isMuted = function () { return muted; };
   Snd.setMuted = function (v) {
@@ -143,7 +153,8 @@
     try { if (dialBus) dialBus.disconnect(); } catch (e) { }
     dialBus = null;
     dialSrc = null;
-    dialPending = false;
+    dialPending = null;
+    if (dialElTimer) { clearTimeout(dialElTimer); dialElTimer = null; }
     stopDialEl(0);
     dialupUntil = 0;
   };
@@ -167,12 +178,24 @@
   /* a gravacao tem silencio no comeco; aparar faz o modem soar
      assim que o agente entra no sistema */
   const DIALUP_TRIM = 1.7;
+  /* Trechos medidos por analise espectral (Goertzel) na gravacao:
+       1.70-2.15s  tom de linha    350 + 440 Hz
+       2.15-4.10s  digitos DTMF    pares 697-941 x 1209-1477
+       4.10-6.55s  toque           440 + 480 Hz
+       6.60s+      handshake       portadora 1200 / 2100 Hz
+     A discagem para um alvo usa tom de linha + digitos: 2.45s a partir
+     do onset. Como e relativo ao onset detectado, continua correto se
+     o arquivo for recodificado com outro silencio de cabeca. */
+  const DIAL_SEGMENT = 2.45;
+  const DIAL_GAIN = 0.5;
   let dialOffset = 0;
+  let dialElTimer = null;
   let dialBuf = null, dialBufState = 'idle';
   let dialEl = null, dialElState = 'idle';
   let dialSrc = null, dialFade = null;
   let dialSource = 'nenhum';
-  let dialPending = false;   /* pediram a discagem antes do arquivo ficar pronto */
+  let dialPlays = 0;         /* quantas vezes a gravacao comecou a tocar */
+  let dialPending = null;    /* 'full' | 'short' quando pediram antes do arquivo ficar pronto */
 
   function loadDialup() {
     if (dialBufState !== 'idle') return;
@@ -184,7 +207,7 @@
       .then(b => c.decodeAudioData(b))
       .then(buf => {
         dialBuf = buf; dialOffset = detectOnset(buf); dialBufState = 'ok';
-        if (dialPending) { dialPending = false; playBuffer(); }
+        flushPending();
       })
       .catch(() => { dialBufState = 'fail'; prepareDialEl(); });
   }
@@ -216,7 +239,7 @@
       dialEl.addEventListener('error', () => { dialElState = 'fail'; dialEl = null; });
       dialEl.addEventListener('canplaythrough', () => {
         dialElState = 'ok';
-        if (dialPending) { dialPending = false; playElement(); }
+        flushPending();
       });
       dialEl.load();
     } catch (e) { dialElState = 'fail'; dialEl = null; }
@@ -244,55 +267,86 @@
   }
 
   /* --- 1. gravacao decodificada, dentro do grafo de audio --- */
-  function playBuffer() {
+  function playBuffer(mode) {
     const c = ac(); if (!c || muted || !dialBuf) return 0;
     const bus = c.createGain();
-    bus.gain.value = 0.5;
+    bus.gain.value = DIAL_GAIN;
     bus.connect(master);
     dialBus = bus;
+
     const src = c.createBufferSource();
     src.buffer = dialBuf;
     src.connect(bus);
-    src.start(0, dialOffset);   /* pula o silencio inicial da gravacao */
+
+    const full = dialBuf.duration - dialOffset;
+    const d = mode === 'short' ? Math.min(DIAL_SEGMENT, full) : full;
+
+    if (mode === 'short') {
+      src.start(0, dialOffset, d);
+      /* corta o trecho com um fade curto para nao estalar */
+      const end = c.currentTime + d;
+      bus.gain.setValueAtTime(DIAL_GAIN, Math.max(c.currentTime, end - 0.18));
+      bus.gain.linearRampToValueAtTime(0.0001, end);
+    } else {
+      src.start(0, dialOffset);   /* pula o silencio inicial da gravacao */
+    }
+
     track(src);
     dialSrc = src;
     dialSource = 'buffer';
-    const d = dialBuf.duration - dialOffset;
+    dialPlays++;
     dialupUntil = c.currentTime + d;
     return d;
   }
 
   /* --- 2. elemento <audio>: unico caminho que funciona em file:// --- */
-  function playElement() {
+  function playElement(mode) {
     const c = ac(); if (!c || muted || !dialEl) return 0;
     try {
       if (dialFade) { clearInterval(dialFade); dialFade = null; }
+      if (dialElTimer) { clearTimeout(dialElTimer); dialElTimer = null; }
       try { dialEl.currentTime = DIALUP_TRIM; } catch (e) { }
       dialEl.volume = elVolume();
       const pr = dialEl.play();
       if (pr && pr.catch) pr.catch(() => { dialSource = 'falhou'; });
       dialSource = 'elemento';
-      const d = (dialEl.duration || DIALUP_FALLBACK_DUR) - DIALUP_TRIM;
+      dialPlays++;
+      const full = (dialEl.duration || DIALUP_FALLBACK_DUR) - DIALUP_TRIM;
+      const d = mode === 'short' ? Math.min(DIAL_SEGMENT, full) : full;
+      if (mode === 'short') {
+        dialElTimer = setTimeout(() => { dialElTimer = null; stopDialEl(0.18); },
+          Math.max(0, d * 1000 - 180));
+      }
       dialupUntil = c.currentTime + d;
       return d;
     } catch (e) { return 0; }
   }
 
-  /* Toca a discagem. Chamada uma vez, quando o agente entra no
-     sistema - nao a cada conexao. Se o arquivo ainda estiver
-     carregando, a reproducao fica pendente e comeca sozinha. */
-  Snd.dialup = function () {
+  /* escolhe o caminho disponivel; se o arquivo ainda estiver
+     carregando, a reproducao fica pendente e comeca sozinha */
+  function playDial(mode) {
     const c = ac(); if (!c || muted) return 0;
     Snd.stopAll();
     loadDialup();
-
-    if (dialBuf) return playBuffer();
-    if (dialEl && dialElState === 'ok') return playElement();
-
-    dialPending = true;
+    if (dialBuf) return playBuffer(mode);
+    if (dialEl && dialElState === 'ok') return playElement(mode);
+    dialPending = mode;
     dialSource = 'aguardando';
-    return DIALUP_FALLBACK_DUR - DIALUP_TRIM;
-  };
+    return mode === 'short' ? DIAL_SEGMENT : DIALUP_FALLBACK_DUR - DIALUP_TRIM;
+  }
+
+  function flushPending() {
+    if (!dialPending) return;
+    const m = dialPending;
+    dialPending = null;
+    playDial(m);
+  }
+
+  /* gravacao inteira: toca na TELA DE LOGIN */
+  Snd.dialup = function () { return playDial('full'); };
+
+  /* so os digitos: toca a cada discagem para um alvo */
+  Snd.dial = function () { return playDial('short'); };
 
 
   /* silencia so a discagem, sem cortar alarme/bipes de trace */
@@ -312,11 +366,13 @@
       dialSrc = null;
     }
     stopDialEl(fade);
-    dialPending = false;
+    dialPending = null;
+    if (dialElTimer) { clearTimeout(dialElTimer); dialElTimer = null; }
     dialupUntil = 0;
   };
 
   Snd.isDialing = function () {
+    if (dialPending) return true;   /* pedida, esperando arquivo ou gesto */
     return !!(ctx && dialupUntil > ctx.currentTime);
   };
 
@@ -506,7 +562,7 @@
     return {
       ctx: ctx, master: master, active: active.size, created: created,
       dialSource: dialSource, dialBuf: dialBufState, dialEl: dialElState,
-      dialOffset: dialOffset
+      dialOffset: dialOffset, dialPlays: dialPlays, dialPending: dialPending
     };
   };
 

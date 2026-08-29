@@ -46,31 +46,33 @@
   UI.boot = function (done) {
     const out = U.$('#boot-text');
     out.textContent = '';
-    let li = 0, ci = 0;
+    let li = 0, ci = 0, fired = false, timer = null;
+
+    /* uma tecla ou clique pula o boot a qualquer momento; o guarda
+       impede que o timeout final reabra o login depois */
+    const finish = () => {
+      if (fired) return;
+      fired = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('keydown', finish);
+      document.removeEventListener('click', finish);
+      out.textContent = BOOT_LINES.join('\n');
+      done();
+    };
+    document.addEventListener('keydown', finish);
+    document.addEventListener('click', finish);
+
     function step() {
-      if (li >= BOOT_LINES.length) {
-        let fired = false;
-        const finish = () => {
-          if (fired) return;          /* o timeout nao pode reabrir o login depois */
-          fired = true;
-          document.removeEventListener('keydown', finish);
-          document.removeEventListener('click', finish);
-          done();
-        };
-        document.addEventListener('keydown', finish);
-        document.addEventListener('click', finish);
-        setTimeout(finish, 4000);
-        return;
-      }
+      if (li >= BOOT_LINES.length) { timer = setTimeout(finish, 4000); return; }
       const line = BOOT_LINES[li];
       if (ci <= line.length) {
         out.textContent = BOOT_LINES.slice(0, li).join('\n') + (li ? '\n' : '') + line.slice(0, ci);
         ci++;
-        setTimeout(step, line.length > 40 ? 4 : 12);
+        timer = setTimeout(step, line.length > 40 ? 4 : 12);
       } else {
         out.textContent += '\n';
         li++; ci = 0;
-        setTimeout(step, 45);
+        timer = setTimeout(step, 45);
       }
     }
     step();

@@ -910,7 +910,9 @@
 '   MODEM define a velocidade de copia de arquivos.\n\n' +
 '8. SOM\n' +
 '   O botao SOM na barra superior liga e desliga o audio.\n' +
-'   O modem disca quando voce entra no sistema - so uma vez por sessao.\n' +
+'   No carregamento e na tela de login voce ouve a conexao inteira do\n' +
+'   modem com a Uplink. Depois disso, cada clique em CONECTAR toca so o\n' +
+'   tom de linha e os digitos sendo discados - uma vez por chamada.\n' +
 '   Aprenda a jogar de ouvido: o bipe do trace acelera conforme o tempo\n' +
 '   acaba. Quando ele virar um bipe duplo rapido, voce tem poucos segundos.\n' +
 '   Cada ferramenta tem um som proprio, entao da para saber o que terminou\n' +

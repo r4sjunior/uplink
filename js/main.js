@@ -17,8 +17,6 @@
 
   function startDesktop() {
     UI.showScreen('desktop');
-    /* o modem disca uma vez, quando o agente entra no sistema */
-    Snd.dialup();
     UI.onEmail();
     UI.badge('uis', G.missions.available.length);
     UI.dirty();
@@ -33,7 +31,9 @@
   function wire() {
     /* ---- audio ----
        navegadores so permitem tocar som apos um gesto do usuario;
-       o primeiro clique ou tecla libera o AudioContext */
+       o primeiro clique ou tecla libera o AudioContext. O contexto e
+       criado antes disso para a gravacao ja ir baixando. */
+    Snd.preload();
     const unlock = () => { Snd.unlock(); };
     document.addEventListener('mousedown', unlock);
     document.addEventListener('keydown', unlock);
@@ -145,6 +145,13 @@
 
   window.addEventListener('load', () => {
     wire();
-    UI.boot(() => UI.showScreen('login'));
+    /* a gravacao completa toca no carregamento do jogo; se o navegador
+       ainda nao liberou o audio, ela comeca no primeiro clique ou tecla */
+    Snd.dialup();
+    UI.boot(() => {
+      UI.showScreen('login');
+      /* e de novo na tela de login, caso ja tenha terminado */
+      if (!Snd.isDialing()) Snd.dialup();
+    });
   });
 })();

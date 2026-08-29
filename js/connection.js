@@ -97,6 +97,7 @@
     G.conn.trace = null;
     G.conn.screen = Net.firstScreen(target);
     Soft.abortAll();
+    Snd.dial();   /* os digitos do modem a cada discagem para um alvo */
     UI.toast('Conexao estabelecida com ' + target.name, 'ok');
     UI.openConnection();
     return null;
