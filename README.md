@@ -65,17 +65,78 @@ A versão da ferramenta precisa ser **≥** ao nível da camada.
   frente. Se todos os logs estiverem intactos, chegam até você: multa e perda de rating.
   **Basta quebrar um elo.** Três avisos = licença revogada.
 
-### Contratos (7 tipos, liberados por rating)
-`steal_file` · `delete_file` · `trace_hacker` · `change_academic` · `change_criminal` ·
-`destroy_system` · `steal_money`
+### Contratos (13 tipos, liberados por rating)
+
+| Família | Tipos |
+|---|---|
+| Arquivos | `steal_file` · `delete_file` · `destroy_system` |
+| Registros | `change_academic` · `change_criminal` · `trace_hacker` |
+| Dinheiro | `steal_money` |
+| **Redes sociais** | `social_post` · `social_wipe` · `social_dm` |
+| **Videomonitoramento** | `cam_footage` · `cam_observe` · `cam_loop` |
 
 Os alvos são escolhidos por um orçamento de segurança proporcional ao seu rating —
 um novato não recebe um mainframe blindado.
 
+### Redes sociais
+
+Quatro plataformas fictícias — **Chirp** (microblog), **Fotogram** (fotos),
+**LinkWork** (profissional) e **VIBE** (feed) — são servidores como qualquer outro:
+senha, proxy, firewall e monitor. A diferença está do lado de dentro: depois do login
+você não cai num prompt, cai no **painel de moderação com a interface da própria
+plataforma** — barra de busca, feed, assuntos do momento, cards de publicação com
+avatar, contadores de curtida e repost, e o layout mudando conforme a rede (o
+Fotogram é uma grade de fotos, o LinkWork mostra cargo e empresa em cada post).
+
+Cada uma das 90 pessoas do mundo tem perfil em uma ou duas plataformas, com
+publicações, seguidores e caixa de mensagens privadas.
+
+| Ação | Exige | Contrato |
+|---|---|---|
+| Ler o feed e os perfis | login | — |
+| Ler mensagens privadas | **firewall** vencido | — |
+| Gerar dump das mensagens | **firewall** vencido | `social_dm` |
+| Publicar em nome da vítima | **proxy** vencido | `social_post` |
+| Apagar publicações / suspender a conta | **proxy** vencido | `social_wipe` |
+
+O dump vira um arquivo no file server da plataforma — copie e envie por e-mail,
+como em qualquer contrato de roubo de arquivo. O texto exigido pelo contrato de
+publicação já vem carregado no campo, e a verificação ignora maiúsculas e espaços.
+
+### Câmeras de monitoramento
+
+Treze gravadores digitais (sete corporativos e seis públicos: metrô, porto,
+aeroporto, shopping…) com 4 a 8 canais cada. O **vídeo é desenhado quadro a quadro
+em `<canvas>`**, não é imagem pronta:
+
+- **Oito cenas** com atores que se movem: recepção, corredor técnico em perspectiva,
+  estacionamento noturno, antecâmara do cofre, doca de carga, sala de servidores,
+  perímetro externo e hall de elevadores.
+- **Estética de CFTV**: renderização em resolução baixa e ampliada sem
+  suavização, grão, scanlines, vinheta, tinta monocromática, falha horizontal
+  ocasional, ~12 quadros por segundo, IR nas câmeras noturnas.
+- **OSD** com identificação do canal, zona, `● REC` piscando e data/hora correndo
+  pelo relógio do jogo.
+- Com o **firewall ativo o fluxo não abre**: o mosaico mostra estática e `SEM SINAL`.
+
+**Injetar loop** (exige proxy vencido) faz a imagem repetir os últimos 6 segundos e
+**congela o relógio na tela** — a assinatura clássica do golpe. O contrato `cam_loop`
+exige *todas* as câmeras congeladas por 40–90 segundos **seguidos**: se uma voltar ao
+vivo ou você desconectar, a contagem zera — tudo isso com o trace ativo correndo.
+
+No `cam_observe` você precisa mesmo **assistir**: a cada ciclo de 26 s um funcionário
+entra em cena, caminha até o teclado do cofre e digita. O sistema faz um zoom digital
+nos dígitos por alguns segundos. Anote o código e responda no painel do contrato.
+
 ### Mundo procedural
-Cada partida gera ~110 servidores: 36 corporações (servidor público + internal services +
+Cada partida gera ~127 servidores: 36 corporações (servidor público + internal services +
 mainframe para as grandes), 6 bancos com contas e extratos, 90 pessoas com fichas
-acadêmica/criminal/social, 12 hackers rivais, InterNIC, e as bases globais (IAD, GCD, SSD).
+acadêmica/criminal/social, 4 redes sociais com ~135 perfis (≈900 publicações e ~130
+conversas privadas), 13 sistemas de videomonitoramento com ~70 câmeras e suas gravações,
+12 hackers rivais, InterNIC, e as bases globais (IAD, GCD, SSD).
+
+As redes sociais aparecem no diretório do InterNIC; os gravadores de vídeo não —
+eles chegam aos seus links junto com o contrato.
 
 ### Som
 
@@ -166,6 +227,8 @@ js/missions.js         geração, aceite, verificação, entrega e falha de cont
 js/ui.js               boot, gerenciador de janelas, toasts, topbar
 js/apps.js             apps do desktop (e-mail, loja, mapa, gateway, finanças, manual)
 js/server_ui.js        telas dos servidores remotos durante a conexão
+js/social.js           redes sociais: perfis, feed e painel de moderação
+js/cctv.js             câmeras: cenas, renderizador de vídeo e mosaico
 js/main.js             inicialização e fiação
 ```
 
@@ -183,3 +246,7 @@ js/main.js             inicialização e fiação
 - No mainframe, `delete all` no console admin esvazia o sistema de uma vez.
 - Copiar o arquivo não fecha o contrato: **envie por e-mail** ao contratante.
   Enquanto não enviar, o prazo continua correndo.
+- Nas câmeras, o `Firewall_Bypass` vem antes de tudo: sem ele você só vê estática.
+- Contratos de loop e de vigilância exigem ficar **conectado** por um bom tempo.
+  Rota longa e `Monitor_Bypass` antes da primeira ação ilegal, ou o trace te pega
+  esperando o funcionário aparecer.

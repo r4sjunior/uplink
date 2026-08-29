@@ -262,6 +262,68 @@
     }));
     seedLogs(rng, uplinkTest, now);
 
+    /* --- redes sociais --- */
+    const socialProfiles = Social.makeProfiles(rng, world, now);
+    world.social = [];
+    D.SOCIAL_NETS.forEach(net => {
+      const files = [];
+      for (let i = 0; i < rng.int(2, 4); i++) {
+        files.push(makeFile(rng, {
+          name: rng.pick(['backup-perfis', 'export-metricas', 'moderacao-fila',
+            'denuncias-abertas', 'indice-hashtags']) + '-' + rng.int(2012, 2014),
+          size: rng.int(2, 7), enc: rng.chance(0.4) ? rng.int(1, 3) : 0
+        }));
+      }
+      const srv = add(baseServer(rng, {
+        ip: net.ip, name: net.srv, type: 'socialnet',
+        city: net.city, x: net.x, y: net.y,
+        sec: {
+          pass: makePassword(rng, true),
+          proxy: rng.int(2, 4), firewall: rng.int(1, 3), monitor: rng.int(2, 4)
+        },
+        files: files,
+        traceBase: 85 + rng.int(-15, 20),
+        screens: ['socialnet', 'files', 'logs'],
+        publicList: true,
+        notes: net.tag + '  (' + net.domain + ')'
+      }));
+      srv.net = { key: net.key, profiles: socialProfiles[net.key] };
+      seedLogs(rng, srv, now);
+      world.social.push(srv.ip);
+    });
+
+    /* --- videomonitoramento --- */
+    world.cctv = [];
+    function addCCTV(o) {
+      const cams = CCTV.makeCams(rng, rng.int(4, 8));
+      const srv = add(baseServer(rng, {
+        name: o.name, type: 'cctv', corp: o.corp || null,
+        city: o.city, x: o.x, y: o.y,
+        sec: {
+          pass: makePassword(rng, rng.chance(0.6)),
+          proxy: rng.int(1, 4), firewall: rng.int(1, 3), monitor: rng.int(2, 5)
+        },
+        files: CCTV.makeRecordings(rng, cams, now),
+        traceBase: 75 + rng.int(-18, 22),
+        screens: ['cctv', 'files', 'logs'],
+        notes: 'Gravador digital de video. ' + cams.length + ' canais.'
+      }));
+      srv.cams = cams;
+      seedLogs(rng, srv, now);
+      world.cctv.push(srv.ip);
+      return srv;
+    }
+    rng.pickMany(world.corps.filter(c => c.size >= 2), 7).forEach(c => {
+      const cy = D.CITIES.find(z => z[0] === c.city) || rng.pick(D.CITIES);
+      addCCTV({
+        name: c.name + ' Security Camera Network', corp: c.id,
+        city: c.city, x: cy[1] + rng.int(-2, 2), y: cy[2] + rng.int(-2, 2)
+      });
+    });
+    D.CCTV_SITES.forEach(site => {
+      addCCTV({ name: site.name, city: site.city, x: site.x, y: site.y });
+    });
+
     /* --- hackers rivais (alvos de missao trace_hacker) --- */
     world.hackers = rng.pickMany(D.HANDLES, 12).map((h, i) => ({
       id: 'h' + i, handle: h, ip: U.randIP(rng), rating: rng.int(1, 9)
@@ -276,6 +338,8 @@
   };
 
   /* utilitarios usados fora */
+  W.baseServer = baseServer;
+  W.seedLogs = seedLogs;
   W.makeFile = makeFile;
   W.makeLog = makeLog;
   W.makePassword = makePassword;

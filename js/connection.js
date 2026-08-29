@@ -44,6 +44,8 @@
       else if (s.type === 'academic' || s.type === 'social') w = 0.5;
       else if (s.type === 'criminal') w = 0.55;
       else if (s.type === 'mainframe') w = 0.5;
+      else if (s.type === 'socialnet') w = 0.45;
+      else if (s.type === 'cctv') w = 0.3;
       else if (s.type === 'internal') w = 0.4;
       else if (s.type === 'public') w = 0.25;
       q += w;

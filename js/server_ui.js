@@ -101,8 +101,11 @@
       const labels = {
         menu: 'MENU', files: 'FILE SERVER', logs: 'LOG SERVER', console: 'CONSOLE',
         info: 'INFO', academic: 'ACADEMICO', criminal: 'CRIMINAL', social: 'SOCIAL',
-        internic: 'DIRETORIO', bank_login: 'LOGIN', bank_accounts: 'CONTAS'
+        internic: 'DIRETORIO', bank_login: 'LOGIN', bank_accounts: 'CONTAS',
+        socialnet: 'PLATAFORMA', cctv: 'CAMERAS'
       };
+      if (s.type === 'cctv') labels.files = 'GRAVACOES';
+      if (s.type === 'socialnet') labels.files = 'ARQUIVOS';
       items.push([sc, labels[sc] || sc.toUpperCase()]);
     });
     if (s.type === 'bank' && s.st.logged) items.push(['bank_accounts', 'CONTA']);

@@ -89,6 +89,164 @@
     'Falsificacao', 'Destruicao de Propriedade', 'Terrorismo Digital', 'Lavagem de Dinheiro',
     'Posse de Software Ilegal', 'Extorsao'];
 
+  /* =========================================================
+     REDES SOCIAIS
+     plataformas ficticias; cada uma vira um servidor invadivel
+     ========================================================= */
+  D.SOCIAL_NETS = [
+    { key: 'chirp', name: 'Chirp', srv: 'Chirp Social Cluster', domain: 'chirp.net',
+      kind: 'micro', tag: 'O mundo inteiro em 200 caracteres', ip: '77.14.0.10',
+      city: 'San Jose', x: 12, y: 39, glyph: '~', accent: '#4fd8ff', accent2: '#12546b' },
+    { key: 'fotogram', name: 'Fotogram', srv: 'Fotogram Media Cluster', domain: 'fotogram.io',
+      kind: 'photo', tag: 'Sua vida, com filtro', ip: '77.14.0.20',
+      city: 'Los Angeles', x: 12, y: 41, glyph: '#', accent: '#ff5fa2', accent2: '#5f1b46' },
+    { key: 'linkwork', name: 'LinkWork', srv: 'LinkWork Professional Network', domain: 'linkwork.com',
+      kind: 'pro', tag: 'Onde as carreiras acontecem', ip: '77.14.0.30',
+      city: 'Chicago', x: 22, y: 34, glyph: '=', accent: '#5aa9ff', accent2: '#173d66' },
+    { key: 'vibe', name: 'VIBE', srv: 'VIBE Network Core', domain: 'vibe.social',
+      kind: 'feed', tag: 'Fique perto de quem importa', ip: '77.14.0.40',
+      city: 'Berlin', x: 51, y: 28, glyph: '@', accent: '#8cf06a', accent2: '#245c1d' }
+  ];
+
+  /* posts corriqueiros */
+  D.POST_LINES = [
+    'terceira reuniao do dia. ninguem decidiu nada, de novo',
+    'cafe frio, deploy quente',
+    'quem inventou reuniao as 7h da manha merece um processo',
+    'trinta e dois dias sem quebrar a producao',
+    'o transito hoje estava biblico',
+    'quatorze horas no escritorio e o bug continua la',
+    'comprei um teclado novo. minha esposa nao entendeu',
+    'esse aeroporto tem wifi pior que hotel de beira de estrada',
+    'segunda-feira devia ser opcional',
+    'ninguem me avisou que a reuniao era por video. estou de pijama',
+    'acabei de ver o orcamento do ano que vem. ri alto',
+    'tres cafes antes das nove nao e vicio, e engenharia',
+    'meu chefe descobriu emoji. rezem por mim',
+    'chuva forte aqui. metro parado. classico',
+    'terminei o relatorio. em compensacao esqueci de almocar',
+    'o suporte tecnico mandou eu reiniciar. eu SOU o suporte tecnico',
+    'cracha novo, mesma cara de sono',
+    'sete anos na mesma empresa e ainda erro a senha do sistema'
+  ];
+
+  /* posts que um contratante paga para ver desaparecer */
+  D.POST_SPICY = [
+    'entre nos: o numero que apresentamos ao conselho nao fecha',
+    'se eu contasse o que vi no quarto andar voces nao dormiam',
+    'o produto novo nao passou em nenhum teste de seguranca. lancamos assim mesmo',
+    'nosso diretor financeiro nao mora onde ele diz que mora',
+    'esse contrato foi assinado no bar, nao na sala de reuniao',
+    'demitiram a equipe inteira de auditoria numa sexta-feira. pensem nisso',
+    'existe um segundo conjunto de planilhas. eu vi',
+    'a empresa sabe do vazamento desde marco e nao avisou ninguem'
+  ];
+
+  /* legendas de foto */
+  D.POST_PHOTO = [
+    'domingo bem gasto', 'sem filtro, juro', 'ela de novo', 'antes do voo',
+    'a vista do escritorio novo', 'reencontro depois de seis anos',
+    'primeiro dia', 'ultimo dia', 'obrigado por tudo', 'ceu de terca',
+    'meu cachorro nao aprovou o corte de cabelo', 'aniversario dela',
+    'inauguracao', 'esse cafe salvou a semana', 'o mar resolve'
+  ];
+
+  /* posts profissionais */
+  D.POST_PRO = [
+    'Feliz em anunciar que assumi uma nova posicao.',
+    'Estamos contratando. Marque alguem que se encaixa.',
+    'Cinco licoes que aprendi liderando um time remoto.',
+    'Encerro hoje um ciclo de quatro anos. Gratidao a todos.',
+    'Certificacao concluida. Nunca e tarde para estudar.',
+    'Nosso time bateu a meta do trimestre. Orgulho do resultado.',
+    'Procuro indicacoes para uma vaga senior na area de dados.',
+    'Palestrei ontem sobre continuidade de negocio. Slides nos comentarios.'
+  ];
+
+  D.POST_TAGS = ['#trabalho', '#segunda', '#time', '#cafe', '#familia', '#viagem',
+    '#carreira', '#tecnologia', '#semfiltro', '#tbt', '#projeto'];
+
+  /* posts plantados a mando de um contratante */
+  D.PLANT_POSTS = [
+    'Confesso: fui eu quem vazou os documentos internos. Nao aguentava mais.',
+    'Peco demissao a partir de hoje. O motivo todos aqui ja sabem.',
+    'Os numeros que a diretoria apresentou ao conselho sao falsos. Tenho copias.',
+    'Aceitei dinheiro de um concorrente. Devolvi metade. Desculpem.',
+    'Vou processar a empresa. Guardei tudo por escrito desde 2012.',
+    'Nunca terminei o curso que consta no meu curriculo.',
+    'Sim, sou eu por tras da conta anonima que voces tanto procuram.'
+  ];
+
+  /* falas de mensagem privada */
+  D.DM_LINES = [
+    'chega amanha?', 'me liga quando puder', 'nao comenta isso com ninguem',
+    'ja resolvi, relaxa', 'aquilo que falamos continua de pe?',
+    'nao responde por aqui', 'apaga essa conversa depois',
+    'ele nao pode saber que fui eu', 'consegui a copia',
+    'me manda o endereco', 'nao vou conseguir chegar antes das 22h',
+    'ta tudo certo do meu lado', 'preciso de mais tempo',
+    'quanto voce quer por isso?', 'eu te devo essa'
+  ];
+
+  /* falas comprometedoras: o que o contratante realmente quer */
+  D.DM_SECRET = [
+    'a senha do painel e a mesma de sempre, nao anota em lugar nenhum',
+    'o pagamento entra pela empresa do meu cunhado, ninguem repara',
+    'consegui uma copia do contrato antes de assinarem',
+    'ele sabe do desvio. vai custar caro pra calar',
+    'o servidor fica sem monitoramento entre 2h e 4h da manha',
+    'nao existe backup daquele periodo, eu apaguei',
+    'se perguntarem, a gente estava em outra cidade naquele dia',
+    'o cracha do turno da noite abre todas as portas do subsolo'
+  ];
+
+  D.SOCIAL_BIOS = [
+    'opinioes minhas, culpa do meu cafe',
+    'engenheiro. pai. torcedor sofredor',
+    'foto, cafe e conversa fiada',
+    'nao respondo mensagem antes das 9h',
+    'trabalho com dados, sonho com ferias',
+    'aqui so pelos memes',
+    'ex-professor, atual insonia cronica',
+    'gerente de projetos / colecionador de crachas',
+    'se der certo eu escrevo sobre'
+  ];
+
+  D.SOCIAL_TRENDS = ['#apagao', '#greve', '#eleicoes', '#ipo', '#vazamento',
+    '#futebol', '#chuvaforte', '#demissoes', '#lancamento', '#recall'];
+
+  /* =========================================================
+     VIDEOMONITORAMENTO
+     ========================================================= */
+  D.CCTV_SITES = [
+    { name: 'Metro Transit Surveillance Grid', city: 'Tokyo', x: 86, y: 35 },
+    { name: 'Harbor Authority CCTV', city: 'Singapore', x: 76, y: 55 },
+    { name: 'Civic Center Camera Control', city: 'Chicago', x: 22, y: 34 },
+    { name: 'Northgate Mall Security Office', city: 'London', x: 46, y: 28 },
+    { name: 'Aeroporto Internacional - CFTV', city: 'Rio de Janeiro', x: 35, y: 67 },
+    { name: 'Ringstrasse Traffic Watch', city: 'Berlin', x: 51, y: 28 }
+  ];
+
+  /* cenas que o renderizador de video sabe desenhar */
+  D.CAM_SCENES = [
+    { id: 'lobby', name: 'Recepcao', night: false,
+      zones: ['Recepcao Principal', 'Saguao Norte', 'Portaria Social', 'Atrio Central'] },
+    { id: 'corridor', name: 'Corredor Tecnico', night: false,
+      zones: ['Corredor 12', 'Corredor Tecnico -1', 'Ala Leste', 'Passagem de Servico'] },
+    { id: 'parking', name: 'Estacionamento', night: true,
+      zones: ['Estacionamento -2', 'Garagem Subsolo', 'Vagas Visitantes', 'Rampa de Acesso'] },
+    { id: 'vault', name: 'Antecamara do Cofre', night: false, keypad: true,
+      zones: ['Antecamara do Cofre', 'Cofre - Subsolo 3', 'Sala Forte', 'Deposito de Valores'] },
+    { id: 'dock', name: 'Doca de Carga', night: true,
+      zones: ['Doca de Carga', 'Cais 3', 'Patio de Containers', 'Portao de Servico'] },
+    { id: 'server', name: 'Sala de Servidores', night: false,
+      zones: ['Sala de Servidores', 'Datacenter Ala B', 'Rack Room 2', 'Nobreak / Energia'] },
+    { id: 'street', name: 'Perimetro Externo', night: true,
+      zones: ['Perimetro Externo', 'Calcada Sul', 'Portaria de Veiculos', 'Muro Oeste'] },
+    { id: 'elevator', name: 'Hall dos Elevadores', night: false,
+      zones: ['Hall dos Elevadores', 'Elevadores - 3o Andar', 'Antessala da Diretoria'] }
+  ];
+
   /* ---------------- nomes de arquivos ---------------- */
   D.FILE_TOPICS = ['Projeto', 'Relatorio', 'Contrato', 'Pesquisa', 'Prototipo', 'Auditoria',
     'Analise', 'Plano', 'Especificacao', 'Dossie', 'Orcamento', 'Patente'];
@@ -218,7 +376,23 @@
     { id: 'destroy_system', minRating: 4, title: 'Destruir um sistema inteiro',
       diff: 4, reward: [12000, 26000] },
     { id: 'steal_money', minRating: 6, title: 'Desviar fundos de uma conta bancaria',
-      diff: 5, reward: [25000, 60000] }
+      diff: 5, reward: [25000, 60000] },
+
+    /* --- redes sociais --- */
+    { id: 'social_post', minRating: 1, title: 'Publicar em nome de outra pessoa',
+      diff: 2, reward: [3200, 7000] },
+    { id: 'social_wipe', minRating: 1, title: 'Apagar o rastro de alguem numa rede social',
+      diff: 2, reward: [3500, 7600] },
+    { id: 'social_dm', minRating: 3, title: 'Extrair mensagens privadas',
+      diff: 3, reward: [6500, 14000] },
+
+    /* --- videomonitoramento --- */
+    { id: 'cam_footage', minRating: 2, title: 'Roubar gravacao de videomonitoramento',
+      diff: 2, reward: [4200, 9000] },
+    { id: 'cam_observe', minRating: 3, title: 'Vigiar uma camera ao vivo',
+      diff: 3, reward: [7000, 15000] },
+    { id: 'cam_loop', minRating: 5, title: 'Congelar as cameras durante uma invasao fisica',
+      diff: 4, reward: [14000, 30000] }
   ];
 
   /* frases dos empregadores */

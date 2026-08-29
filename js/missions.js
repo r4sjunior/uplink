@@ -28,6 +28,23 @@
   /* teto de seguranca aceitavel para o rating do jogador */
   function secBudget() { return 2 + G.ratingIndex() * 2; }
 
+  /* escolhe um servidor de uma lista respeitando o teto de seguranca */
+  function pickByBudget(list, r) {
+    if (!list.length) return null;
+    const diff = s => (s.sec.proxy || 0) + (s.sec.firewall || 0) + (s.sec.monitor || 0);
+    for (let d = secBudget(); d <= 16; d++) {
+      const pool = list.filter(s => diff(s) <= d);
+      if (pool.length) return r.pick(pool);
+    }
+    return r.pick(list);
+  }
+
+  /* contratos cujo pagamento depende de um anexo enviado por e-mail */
+  const DELIVERY = ['steal_file', 'social_dm', 'cam_footage'];
+  Missions.isDelivery = function (m) { return DELIVERY.indexOf(m.type) >= 0; };
+
+  function norm(t) { return String(t || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
   function corpName(r) { return r.pick(G.world.corps).name; }
 
   /* =========================================================
@@ -170,6 +187,140 @@
           'Se os logs tiverem sido apagados, use Log_UnDeleter.';
         break;
       }
+      /* =============== REDES SOCIAIS =============== */
+      case 'social_post': {
+        const srv = pickByBudget(Social.servers(), r);
+        if (!srv) return null;
+        const prof = r.pick(srv.net.profiles);
+        const meta = Social.netMeta(srv);
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.profId = prof.id; m.handle = prof.handle; m.victim = prof.name;
+        m.netName = meta.name;
+        m.postText = r.pick(D.PLANT_POSTS);
+        m.title = 'Publicar em nome de @' + prof.handle;
+        m.desc =
+          'A conta @' + prof.handle + ' (' + prof.name + ') no ' + meta.name + '\n' +
+          'precisa dizer uma coisa que o dono dela nunca diria.\n\n' +
+          'SERVIDOR: ' + srv.name + ' (' + srv.ip + ')\n\n' +
+          'TEXTO EXATO DA PUBLICACAO:\n' +
+          '   "' + m.postText + '"\n\n' +
+          '1. Quebre a senha do cluster e vença o PROXY (escrita).\n' +
+          '2. Abra a conta pela busca da plataforma.\n' +
+          '3. Aba ACOES ADMIN > PUBLICAR. O texto ja vem carregado.\n\n' +
+          'Nao apague nada. Queremos que o post fique bem visivel.';
+        break;
+      }
+      case 'social_wipe': {
+        const cands = [];
+        Social.servers().forEach(sv => {
+          sv.net.profiles.forEach(pr => { if (pr.posts.length >= 4) cands.push(sv); });
+        });
+        const srv = pickByBudget(cands.length ? Array.from(new Set(cands)) : Social.servers(), r);
+        if (!srv) return null;
+        const withPosts = srv.net.profiles.filter(pr => pr.posts.length >= 3);
+        const prof = r.pick(withPosts.length ? withPosts : srv.net.profiles);
+        const meta = Social.netMeta(srv);
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.profId = prof.id; m.handle = prof.handle; m.victim = prof.name;
+        m.netName = meta.name;
+        m.title = 'Apagar o rastro de @' + prof.handle;
+        m.desc =
+          'Nosso cliente aparece em publicacoes da conta @' + prof.handle + '\n' +
+          '(' + prof.name + ') no ' + meta.name + '. Isso precisa sumir.\n\n' +
+          'SERVIDOR: ' + srv.name + ' (' + srv.ip + ')\n\n' +
+          'Apague TODAS as publicacoes da conta - nao sobra nenhuma.\n' +
+          'Exige PROXY vencido. Depois limpe os logs da plataforma.';
+        break;
+      }
+      case 'social_dm': {
+        const pool = [];
+        Social.servers().forEach(sv => {
+          if (sv.net.profiles.some(pr => pr.dms.length > 0)) pool.push(sv);
+        });
+        const srv = pickByBudget(pool.length ? pool : Social.servers(), r);
+        if (!srv) return null;
+        const withDM = srv.net.profiles.filter(pr => pr.dms.length > 0);
+        if (!withDM.length) return null;
+        const prof = r.pick(withDM);
+        const meta = Social.netMeta(srv);
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.profId = prof.id; m.handle = prof.handle; m.victim = prof.name;
+        m.netName = meta.name;
+        m.fileName = Social.dumpName(prof);
+        m.title = 'Extrair as mensagens de @' + prof.handle;
+        m.desc =
+          'Queremos as conversas privadas de @' + prof.handle + '\n' +
+          '(' + prof.name + ') no ' + meta.name + '.\n\n' +
+          'SERVIDOR: ' + srv.name + ' (' + srv.ip + ')\n\n' +
+          '1. Vença o FIREWALL - a caixa de mensagens e conteudo privado.\n' +
+          '2. Abra a conta, aba ACOES ADMIN > GERAR DUMP DAS MENSAGENS.\n' +
+          '   Isso cria o arquivo "' + m.fileName + '" no file server.\n' +
+          '3. Copie o arquivo e ENVIE por e-mail para ' + m.email + '.\n\n' +
+          'Sem o anexo aqui, nao ha pagamento.';
+        break;
+      }
+
+      /* =============== VIDEOMONITORAMENTO =============== */
+      case 'cam_footage': {
+        const srv = pickByBudget(CCTV.servers().filter(x => x.files.length), r);
+        if (!srv) return null;
+        const f = r.pick(srv.files);
+        const cam = (srv.cams || []).find(c => c.id === f.camId);
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.fileName = f.name; m.fileId = f.id;
+        m.title = 'Recuperar a gravacao ' + f.name;
+        m.desc =
+          'O gravador de ' + srv.name + '\n(' + srv.ip + ') guarda um trecho que nos interessa.\n\n' +
+          'ARQUIVO: ' + f.name + '  (' + f.size + 'Gq' +
+          (f.enc ? ', criptografia nivel ' + f.enc : '') + ')\n' +
+          (cam ? 'CAMERA : ' + cam.label + ' - ' + cam.zone + '\n' : '') + '\n' +
+          '1. Vença o FIREWALL para listar as gravacoes.\n' +
+          '2. Copie o arquivo para o gateway' +
+          (f.enc ? ' e rode o Decrypter' : '') + '.\n' +
+          '3. Envie por e-mail para ' + m.email + '.\n\n' +
+          'Nao apague o original: uma lacuna no gravador levanta suspeita.';
+        break;
+      }
+      case 'cam_observe': {
+        const pool = CCTV.servers().filter(x => (x.cams || []).some(c => c.keypad));
+        const srv = pickByBudget(pool, r);
+        if (!srv) return null;
+        const cam = r.pick(srv.cams.filter(c => c.keypad));
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.camId = cam.id; m.camLabel = cam.label; m.camZone = cam.zone;
+        m.answer = cam.code;
+        m.title = 'Vigiar a ' + cam.label + ' de ' + srv.name;
+        m.desc =
+          'Precisamos do codigo do teclado da antecamara do cofre em\n' +
+          srv.name + ' (' + srv.ip + ').\n\n' +
+          'CAMERA: ' + cam.label + ' - ' + cam.zone + '\n\n' +
+          '1. Vença o FIREWALL: sem ele o fluxo de video nao abre.\n' +
+          '2. Abra a camera em tela cheia e espere. Um funcionario\n' +
+          '   passa em ronda e digita o codigo no teclado.\n' +
+          '3. O sistema faz zoom digital: anote os digitos.\n' +
+          '4. Informe o codigo no painel do contrato.\n\n' +
+          'Fique conectado o tempo necessario. Cuide do seu trace.';
+        break;
+      }
+      case 'cam_loop': {
+        const srv = pickByBudget(CCTV.servers(), r);
+        if (!srv) return null;
+        m.targetIp = srv.ip; m.targetName = srv.name;
+        m.loopSeconds = r.int(40, 90);
+        m.loopHeld = 0;
+        m.title = 'Congelar as cameras de ' + srv.name;
+        m.desc =
+          'Uma equipe nossa entra em ' + srv.name + '\n(' + srv.ip + ') hoje a noite.\n\n' +
+          'Todas as ' + (srv.cams || []).length + ' cameras precisam ficar em LOOP por\n' +
+          m.loopSeconds + ' segundos SEGUIDOS enquanto a equipe atravessa o predio.\n\n' +
+          '1. Vença o PROXY: injetar loop e escrita no gravador.\n' +
+          '2. Use LOOP EM TODAS no painel de cameras.\n' +
+          '3. Segure a conexao ate a barra encher. Se uma camera voltar\n' +
+          '   ao vivo ou voce desconectar, a contagem zera.\n\n' +
+          'O trace vai estar correndo. Monte uma rota longa.';
+        break;
+      }
+
       case 'steal_money': {
         const bankIp = r.pick(G.world.banks);
         const bank = G.srv(bankIp);
@@ -277,7 +428,7 @@
      Retorna {erro} ou {ok:true, aceito:bool, msg}
      ========================================================= */
   Missions.deliverables = function () {
-    return G.missions.active.filter(m => m.type === 'steal_file' && !m.delivered);
+    return G.missions.active.filter(m => Missions.isDelivery(m) && !m.delivered);
   };
 
   Missions.sendFile = function (toEmail, memId) {
@@ -290,10 +441,10 @@
 
     /* o anexo precisa ser exatamente o arquivo pedido, do servidor pedido */
     const exact = G.missions.active.find(m =>
-      m.type === 'steal_file' && !m.delivered && m.email === toEmail &&
+      Missions.isDelivery(m) && !m.delivered && m.email === toEmail &&
       m.fileName === f.name && m.targetIp === f.src);
     const any = G.missions.active.find(m =>
-      m.type === 'steal_file' && !m.delivered && m.email === toEmail);
+      Missions.isDelivery(m) && !m.delivered && m.email === toEmail);
 
     G.addEmail({
       from: G.handle + '@uplink.net', to: toEmail, kind: 'sent', read: true,
@@ -367,6 +518,27 @@
       case 'steal_money': {
         return (m.transferred || 0) >= m.amount;
       }
+
+      case 'social_post': {
+        const s = G.srv(m.targetIp);
+        const pr = Social.profile(s, m.profId);
+        return !!pr && pr.posts.some(po => po.planted && norm(po.txt) === norm(m.postText));
+      }
+      case 'social_wipe': {
+        const s = G.srv(m.targetIp);
+        const pr = Social.profile(s, m.profId);
+        return !!pr && pr.posts.length === 0;
+      }
+      case 'social_dm':
+      case 'cam_footage': {
+        return m.delivered === true;
+      }
+      case 'cam_observe': {
+        return m.submitted === m.answer;
+      }
+      case 'cam_loop': {
+        return (m.loopHeld || 0) >= m.loopSeconds;
+      }
     }
     return false;
   };
@@ -382,7 +554,7 @@
     G.neuroPoints += m.neuro || 0;
 
     /* consome o arquivo entregue */
-    if (m.type === 'steal_file') {
+    if (Missions.isDelivery(m)) {
       const idx = G.memory.findIndex(f => f.name === m.fileName && f.src === m.targetIp);
       if (idx >= 0) G.memory.splice(idx, 1);
     }

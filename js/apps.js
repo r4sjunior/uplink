@@ -442,11 +442,16 @@
               UI.toast('Alvo: ' + m.targetName, 'ok'); Apps.map();
             }));
           }
-          if (m.type === 'steal_file') {
+          if (Missions.isDelivery(m)) {
             /* estado da entrega, para o jogador saber o que falta */
             const mem = G.memory.find(f => f.name === m.fileName && f.src === m.targetIp);
+            const srv = G.srv(m.targetIp);
+            const onSrv = srv && srv.files.some(f => f.name === m.fileName);
             let st, cls;
             if (m.delivered) { st = 'ARQUIVO ENTREGUE - aguardando pagamento'; cls = 'ok'; }
+            else if (!mem && m.type === 'social_dm' && !onSrv) {
+              st = 'FALTA GERAR O DUMP na aba ACOES ADMIN da conta'; cls = 'warn';
+            }
             else if (!mem) { st = 'FALTA COPIAR o arquivo do servidor'; cls = 'warn'; }
             else if (mem.enc) { st = 'ARQUIVO CRIPTOGRAFADO (nivel ' + mem.enc + ') - use o Decrypter'; cls = 'bad'; }
             else { st = 'PRONTO PARA ENVIAR por e-mail'; cls = 'ok'; }
@@ -461,14 +466,43 @@
               UI.dirty();
             }, !mem || !!mem.enc || !!m.delivered));
           }
-          if (m.type === 'trace_hacker') {
-            const ipf = input('ans_' + m.id, 'IP do hacker', m.submitted || '');
+          if (m.type === 'social_post') {
+            const s2 = G.srv(m.targetIp);
+            const pr = s2 && typeof Social !== 'undefined' ? Social.profile(s2, m.profId) : null;
+            const done = pr && pr.posts.some(po => po.planted);
+            box.appendChild(U.el('div', 'mt muted', 'TEXTO EXIGIDO:'));
+            box.appendChild(U.el('div', 'mono-block', m.postText));
+            box.appendChild(U.el('div', (done ? 'ok' : 'warn') + ' mt',
+              '>> ' + (done ? 'PUBLICACAO NO AR' : 'FALTA PUBLICAR na conta @' + m.handle)));
+          }
+          if (m.type === 'social_wipe') {
+            const s2 = G.srv(m.targetIp);
+            const pr = s2 && typeof Social !== 'undefined' ? Social.profile(s2, m.profId) : null;
+            const n = pr ? pr.posts.length : '?';
+            box.appendChild(U.el('div', (n === 0 ? 'ok' : 'warn') + ' mt',
+              '>> ' + (n === 0 ? 'PERFIL LIMPO' : n + ' publicacoes ainda no ar em @' + m.handle)));
+          }
+          if (m.type === 'cam_loop') {
+            const held = m.loopHeld || 0;
+            const pct = U.clamp((held / m.loopSeconds) * 100, 0, 100);
+            const bar = U.el('div', 'bar mt' + (pct >= 100 ? '' : ' amber'));
+            const fill = U.el('i'); fill.style.width = pct + '%';
+            bar.appendChild(fill);
+            box.appendChild(bar);
+            box.appendChild(U.el('div', 'muted',
+              'LOOP CONTINUO: ' + Math.floor(held) + 's / ' + m.loopSeconds + 's' +
+              (held > 0 && held < m.loopSeconds ? '  (zera se cair)' : '')));
+          }
+          if (m.type === 'trace_hacker' || m.type === 'cam_observe') {
+            const isCam = m.type === 'cam_observe';
+            const ipf = input('ans_' + m.id, isCam ? 'codigo do teclado' : 'IP do hacker', m.submitted || '');
             ipf.style.width = '160px';
             acts.appendChild(ipf);
-            acts.appendChild(btn('ENVIAR IP', 'btn-mini', () => {
+            acts.appendChild(btn(isCam ? 'ENVIAR CODIGO' : 'ENVIAR IP', 'btn-mini', () => {
               m.submitted = ipf.value.trim();
-              if (m.submitted === m.answer) UI.toast('IP confirmado!', 'ok');
-              else UI.toast('IP incorreto. O empregador nao ficou feliz.', 'bad');
+              if (m.submitted === m.answer) UI.toast(isCam ? 'Codigo confirmado!' : 'IP confirmado!', 'ok');
+              else UI.toast(isCam ? 'Codigo errado. Observe a camera de novo.'
+                : 'IP incorreto. O empregador nao ficou feliz.', 'bad');
               UI.dirty();
             }));
           }
@@ -552,7 +586,7 @@
   /* nome curto de servidor, sem o sufixo institucional */
   function shortName(s) {
     const n = s.name.replace(
-      / (Internal Services Machine|Central Mainframe|Public Access Server|File Server)$/, '');
+      / (Internal Services Machine|Central Mainframe|Public Access Server|File Server|Security Camera Network|Social Cluster|Media Cluster|Professional Network|Network Core)$/, '');
     return n.length > 20 ? n.slice(0, 19) + '.' : n;
   }
   Apps.shortName = shortName;
@@ -917,7 +951,32 @@
 '   acaba. Quando ele virar um bipe duplo rapido, voce tem poucos segundos.\n' +
 '   Cada ferramenta tem um som proprio, entao da para saber o que terminou\n' +
 '   sem tirar os olhos da tela do servidor.\n\n' +
-'9. DICAS\n' +
+'9. REDES SOCIAIS\n' +
+'   Quatro plataformas ficticias (Chirp, Fotogram, LinkWork, VIBE) rodam\n' +
+'   como servidores comuns: senha, proxy, firewall e monitor.\n' +
+'   Depois do login voce cai no painel de moderacao, com o feed da\n' +
+'   plataforma na tela. Busque a conta alvo e abra as abas:\n' +
+'   PUBLICACOES - apagar posts um a um (exige PROXY vencido)\n' +
+'   MENSAGENS   - ler conversas privadas (exige FIREWALL vencido)\n' +
+'   ACOES ADMIN - publicar como a vitima, apagar tudo, suspender a conta\n' +
+'                 e gerar o dump das mensagens.\n' +
+'   O dump vira um arquivo no file server da plataforma: copie e envie\n' +
+'   por e-mail, como em qualquer contrato de roubo de arquivo.\n\n' +
+'10. CAMERAS DE MONITORAMENTO\n' +
+'   Os gravadores digitais (CCTV) aparecem como servidores do tipo cctv.\n' +
+'   FIREWALL vencido libera o fluxo de video - sem ele voce so ve\n' +
+'   estatica. O mosaico mostra todos os canais ao vivo; clique num deles\n' +
+'   para ampliar. As gravacoes antigas ficam na aba GRAVACOES e se\n' +
+'   copiam como arquivos normais.\n' +
+'   INJETAR LOOP exige PROXY vencido: a imagem passa a repetir os\n' +
+'   ultimos segundos e o relogio da tela congela - e assim que a equipe\n' +
+'   de campo atravessa o predio. Contratos de loop exigem TODAS as\n' +
+'   cameras congeladas por um tempo seguido; se uma voltar ao vivo ou\n' +
+'   voce desconectar, a contagem zera.\n' +
+'   Nos contratos de vigilancia, espere a ronda: um funcionario aparece\n' +
+'   na antecamara do cofre e digita o codigo no teclado. O sistema faz\n' +
+'   zoom digital nos digitos. Anote e responda no painel do contrato.\n\n' +
+'11. DICAS\n' +
 '   - Treine na Uplink Test Machine: senha rosebud, sem monitor.\n' +
 '   - IP_Probe revela a seguranca do alvo ANTES de conectar.\n' +
 '   - Senhas de contas bancarias ficam guardadas nos servidores\n' +
