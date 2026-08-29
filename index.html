@@ -2,7 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05080a">
 <title>UPLINK :: Trust Is A Weakness</title>
 <link rel="stylesheet" href="css/main.css">
 </head>
@@ -82,14 +84,16 @@
   </div>
 
   <nav id="dock">
-    <button class="dockbtn" data-app="email"><span class="dk-ico">✉</span><span>E-MAIL</span><b class="badge" id="badge-email"></b></button>
-    <button class="dockbtn" data-app="uis"><span class="dk-ico">⌘</span><span>UPLINK IS</span><b class="badge" id="badge-uis"></b></button>
-    <button class="dockbtn" data-app="missions"><span class="dk-ico">▤</span><span>CONTRATOS</span></button>
-    <button class="dockbtn" data-app="links"><span class="dk-ico">⛓</span><span>LINKS</span></button>
-    <button class="dockbtn" data-app="map"><span class="dk-ico">◍</span><span>ROTA</span></button>
-    <button class="dockbtn" data-app="gateway"><span class="dk-ico">▣</span><span>GATEWAY</span></button>
-    <button class="dockbtn" data-app="finance"><span class="dk-ico">$</span><span>FINANÇAS</span></button>
-    <button class="dockbtn" data-app="help"><span class="dk-ico">?</span><span>MANUAL</span></button>
+    <div id="dock-apps">
+      <button class="dockbtn" data-app="email"><span class="dk-ico">✉</span><span>E-MAIL</span><b class="badge" id="badge-email"></b></button>
+      <button class="dockbtn" data-app="uis"><span class="dk-ico">⌘</span><span>UPLINK IS</span><b class="badge" id="badge-uis"></b></button>
+      <button class="dockbtn" data-app="missions"><span class="dk-ico">▤</span><span>CONTRATOS</span></button>
+      <button class="dockbtn" data-app="links"><span class="dk-ico">⛓</span><span>LINKS</span></button>
+      <button class="dockbtn" data-app="map"><span class="dk-ico">◍</span><span>ROTA</span></button>
+      <button class="dockbtn" data-app="gateway"><span class="dk-ico">▣</span><span>GATEWAY</span></button>
+      <button class="dockbtn" data-app="finance"><span class="dk-ico">$</span><span>FINANÇAS</span></button>
+      <button class="dockbtn" data-app="help"><span class="dk-ico">?</span><span>MANUAL</span></button>
+    </div>
     <div class="dock-spacer"></div>
     <div id="conn-status" class="conn-idle">DESCONECTADO</div>
   </nav>

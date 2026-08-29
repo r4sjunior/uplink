@@ -14,6 +14,24 @@
   UI.dirty = function () { _dirty = true; };
 
   /* =========================================================
+     VIEWPORT
+     Esta condicao e a MESMA do bloco de tela cheia em main.css: onde
+     o CSS estica a janela para a tela inteira, arrastar e redimensionar
+     deixam de fazer sentido. Se um dos dois mudar, o outro tem que
+     acompanhar.
+     ========================================================= */
+  const mqMobile = window.matchMedia(
+    '(max-width:820px), (max-height:560px) and (max-width:1000px)');
+  UI.isMobile = function () { return mqMobile.matches; };
+
+  /* area util onde as janelas vivem (#windows ocupa todo o #desktop) */
+  function deskSize() {
+    const d = U.$('#desktop');
+    if (d && d.clientWidth) return { w: d.clientWidth, h: d.clientHeight };
+    return { w: window.innerWidth, h: Math.max(200, window.innerHeight - 90) };
+  }
+
+  /* =========================================================
      TELAS
      ========================================================= */
   UI.showScreen = function (id) {
@@ -111,12 +129,17 @@
     opts = opts || {};
     const host = U.$('#windows');
     const el = U.el('div', 'win' + (opts.cls ? ' ' + opts.cls : ''));
-    const w = opts.w || 640, h = opts.h || 440;
+    /* nunca nasce maior que a area disponivel; no mobile o CSS ainda
+       forca tela cheia, mas os valores ficam prontos caso o aparelho
+       gire para paisagem e volte ao modo desktop */
+    const D = deskSize();
+    const w = Math.min(opts.w || 640, D.w - 16);
+    const h = Math.min(opts.h || 440, D.h - 16);
     const n = Object.keys(wins).length;
     el.style.width = w + 'px';
     el.style.height = h + 'px';
-    el.style.left = Math.max(8, Math.min((window.innerWidth - w) / 2 + (n % 5) * 26 - 60, window.innerWidth - w - 8)) + 'px';
-    el.style.top = Math.max(8, Math.min(60 + (n % 5) * 24, window.innerHeight - h - 100)) + 'px';
+    el.style.left = U.clamp((D.w - w) / 2 + (n % 5) * 26 - 60, 8, Math.max(8, D.w - w - 8)) + 'px';
+    el.style.top = U.clamp(8 + (n % 5) * 24, 8, Math.max(8, D.h - h - 8)) + 'px';
 
     const bar = U.el('div', 'win-title');
     const tt = U.el('span', null, opts.title || id);
@@ -141,7 +164,7 @@
     wins[id] = rec;
 
     close.addEventListener('click', (e) => { e.stopPropagation(); UI.close(id); });
-    el.addEventListener('mousedown', () => UI.focus(id));
+    el.addEventListener('pointerdown', () => UI.focus(id));
     makeDrag(el, bar);
     makeResize(el, grip);
     UI.focus(id);
@@ -163,6 +186,7 @@
   };
 
   UI.isOpen = function (id) { return !!wins[id]; };
+  UI.isFocused = function (id) { return focusedId === id; };
   UI.win = function (id) { return wins[id]; };
 
   UI.focus = function (id) {
@@ -178,37 +202,80 @@
     if (wins[id]) wins[id].titleEl.textContent = txt;
   };
 
-  function makeDrag(el, handle) {
-    let sx, sy, ox, oy, on = false;
-    handle.addEventListener('mousedown', e => {
+  /* Pointer Events cobrem mouse, caneta e toque num caminho so.
+     setPointerCapture mantem o gesto vivo mesmo se o dedo sair do
+     elemento; touch-action:none no CSS impede o navegador de rolar. */
+  function dragger(handle, onStart, onMove) {
+    let pid = null, sx = 0, sy = 0, ctx = null;
+    handle.addEventListener('pointerdown', e => {
+      if (e.button) return;
       if (e.target.tagName === 'BUTTON') return;
-      on = true; sx = e.clientX; sy = e.clientY;
-      ox = el.offsetLeft; oy = el.offsetTop;
-      e.preventDefault();
+      if (UI.isMobile()) return;   /* janela ocupa a tela toda: nada a mover */
+      ctx = onStart();
+      pid = e.pointerId; sx = e.clientX; sy = e.clientY;
+      try { handle.setPointerCapture(pid); } catch (err) { }
+      e.preventDefault(); e.stopPropagation();
     });
-    document.addEventListener('mousemove', e => {
-      if (!on) return;
-      el.style.left = U.clamp(ox + e.clientX - sx, -el.offsetWidth + 80, window.innerWidth - 80) + 'px';
-      el.style.top = U.clamp(oy + e.clientY - sy, 0, window.innerHeight - 90) + 'px';
+    handle.addEventListener('pointermove', e => {
+      if (pid === null || e.pointerId !== pid) return;
+      onMove(e.clientX - sx, e.clientY - sy, ctx);
     });
-    document.addEventListener('mouseup', () => { on = false; });
+    const end = e => {
+      if (pid === null || (e && e.pointerId !== pid)) return;
+      try { handle.releasePointerCapture(pid); } catch (err) { }
+      pid = null; ctx = null;
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+
+  function makeDrag(el, handle) {
+    dragger(handle,
+      () => ({ x: el.offsetLeft, y: el.offsetTop }),
+      (dx, dy, c) => {
+        const D = deskSize();
+        el.style.left = U.clamp(c.x + dx, -el.offsetWidth + 80, D.w - 80) + 'px';
+        el.style.top = U.clamp(c.y + dy, 0, Math.max(0, D.h - 34)) + 'px';
+      });
   }
 
   function makeResize(el, grip) {
-    let sx, sy, ow, oh, on = false;
-    grip.addEventListener('mousedown', e => {
-      on = true; sx = e.clientX; sy = e.clientY;
-      ow = el.offsetWidth; oh = el.offsetHeight;
-      e.preventDefault(); e.stopPropagation();
-    });
-    document.addEventListener('mousemove', e => {
-      if (!on) return;
-      el.style.width = Math.max(340, ow + e.clientX - sx) + 'px';
-      el.style.height = Math.max(200, oh + e.clientY - sy) + 'px';
-      UI.dirty();
-    });
-    document.addEventListener('mouseup', () => { on = false; });
+    dragger(grip,
+      () => ({ w: el.offsetWidth, h: el.offsetHeight }),
+      (dx, dy, c) => {
+        const D = deskSize();
+        el.style.width = U.clamp(c.w + dx, 300, D.w - el.offsetLeft) + 'px';
+        el.style.height = U.clamp(c.h + dy, 180, D.h - el.offsetTop) + 'px';
+        UI.dirty();
+      });
   }
+
+  /* =========================================================
+     REAJUSTE AO REDIMENSIONAR / GIRAR O APARELHO
+     Janelas abertas antes do giro nao podem ficar fora da area util.
+     ========================================================= */
+  function fitWindows() {
+    if (UI.isMobile()) return;   /* tela cheia via CSS, nada a recalcular */
+    const D = deskSize();
+    Object.values(wins).forEach(rec => {
+      const el = rec.el;
+      const w = Math.min(el.offsetWidth, D.w - 16);
+      const h = Math.min(el.offsetHeight, D.h - 16);
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      el.style.left = U.clamp(el.offsetLeft, 0, Math.max(0, D.w - w)) + 'px';
+      el.style.top = U.clamp(el.offsetTop, 0, Math.max(0, D.h - h)) + 'px';
+    });
+  }
+
+  let fitTimer = null;
+  function scheduleFit() {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(() => { fitWindows(); UI.dirty(); }, 120);
+  }
+  window.addEventListener('resize', scheduleFit);
+  window.addEventListener('orientationchange', scheduleFit);
+  if (mqMobile.addEventListener) mqMobile.addEventListener('change', scheduleFit);
 
   /* =========================================================
      RENDER
@@ -269,7 +336,7 @@
   let pointerDown = false;
   let renderPending = false;
 
-  document.addEventListener('mousedown', () => { pointerDown = true; }, true);
+  document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
   const releasePointer = function () {
     if (!pointerDown) return;
     pointerDown = false;
@@ -279,7 +346,8 @@
       setTimeout(() => { _dirty = true; }, 0);
     }
   };
-  document.addEventListener('mouseup', releasePointer, true);
+  document.addEventListener('pointerup', releasePointer, true);
+  document.addEventListener('pointercancel', releasePointer, true);
   window.addEventListener('blur', releasePointer);
 
   function renderWindows() {

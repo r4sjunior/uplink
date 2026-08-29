@@ -71,14 +71,11 @@
         if (rec.state.compose) top.appendChild(composer(rec, pend));
         body.appendChild(top);
 
-        const wrap = U.el('div', 'row');
+        const wrap = U.el('div', 'row split');
         wrap.style.height = 'calc(100% - ' + (rec.state.compose ? 190 : 46) + 'px)';
         wrap.style.alignItems = 'stretch';
 
-        const left = U.el('div', 'list');
-        left.style.width = '260px';
-        left.style.overflow = 'auto';
-        left.style.flex = 'none';
+        const left = U.el('div', 'list split-side');
         G.email.forEach(m => {
           const sent = m.kind === 'sent';
           const it = U.el('div', 'list-item' + (m.read ? '' : ' unread') + (rec.state.sel === m.id ? ' sel' : ''));
@@ -96,9 +93,7 @@
         });
         if (!G.email.length) left.appendChild(p('Caixa vazia.', 'muted center mt'));
 
-        const right = U.el('div', 'grow');
-        right.style.overflow = 'auto';
-        right.style.paddingLeft = '10px';
+        const right = U.el('div', 'grow split-main');
         const m = G.email.find(x => x.id === rec.state.sel);
         if (m) {
           right.appendChild(h2(m.subj));
@@ -639,12 +634,21 @@
           UI.dirty();
         }));
         top.appendChild(acts);
-        top.appendChild(p('Clique num no para adicionar/remover da rota. Shift+clique define o alvo.', 'muted mt'));
+
+        /* no toque nao existe shift: um seletor de modo cobre os dois casos */
+        const modes = row('mt wrap');
+        modes.appendChild(U.el('span', 'muted', 'ACAO AO TOCAR NUM NO:'));
+        [['route', 'ROTA'], ['target', 'ALVO']].forEach(([k, lab]) => {
+          const b = U.el('button', 'tab' + ((rec.state.pick || 'route') === k ? ' on' : ''), lab);
+          b.addEventListener('click', () => { rec.state.pick = k; UI.dirty(); });
+          modes.appendChild(b);
+        });
+        top.appendChild(modes);
+        top.appendChild(p('No desktop, Shift+clique tambem define o alvo direto.', 'muted mt'));
         wrap.appendChild(top);
 
         /* mapa svg */
-        const holder = U.el('div', 'grow');
-        holder.style.cssText = 'border:1px solid var(--edge);overflow:hidden;position:relative';
+        const holder = U.el('div', 'grow map-holder');
         holder.appendChild(buildMap());
         wrap.appendChild(holder);
         body.appendChild(wrap);
@@ -679,6 +683,12 @@
     /* Reino Unido / Escandinavia */
     '408,88 428,80 432,106 412,112'
   ];
+
+  /* modo de selecao do mapa, lido pelo handler de cada no */
+  function pickMode() {
+    const rec = UI.win('map');
+    return (rec && rec.state.pick) || 'route';
+  }
 
   function buildMap() {
     const NS = 'http://www.w3.org/2000/svg';
@@ -740,13 +750,19 @@
       g.setAttribute('class', cls);
       const c = document.createElementNS(NS, 'circle');
       c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.setAttribute('r', 7);
+      /* o no desenhado tem 7 unidades de raio; num mapa reduzido para a
+         largura de um celular isso vira ~3px. Este circulo invisivel da
+         ao dedo um alvo de tamanho decente sem mudar o desenho. */
+      const hit = document.createElementNS(NS, 'circle');
+      hit.setAttribute('cx', pt.x); hit.setAttribute('cy', pt.y); hit.setAttribute('r', 20);
+      hit.setAttribute('class', 'map-hit');
       const tx = document.createElementNS(NS, 'text');
       tx.setAttribute('x', pt.x + 11); tx.setAttribute('y', pt.y + 4);
       tx.textContent = s.name.length > 26 ? s.name.slice(0, 24) + '..' : s.name;
-      g.appendChild(c); g.appendChild(tx);
+      g.appendChild(c); g.appendChild(tx); g.appendChild(hit);
       g.addEventListener('click', (e) => {
         let err;
-        if (e.shiftKey) err = Net.setTarget(ip);
+        if (e.shiftKey || pickMode() === 'target') err = Net.setTarget(ip);
         else if (G.conn.route.includes(ip)) err = Net.removeHop(ip);
         else err = Net.addHop(ip);
         if (err) UI.toast(err, 'bad');

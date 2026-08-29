@@ -35,7 +35,7 @@
        criado antes disso para a gravacao ja ir baixando. */
     Snd.preload();
     const unlock = () => { Snd.unlock(); };
-    document.addEventListener('mousedown', unlock);
+    document.addEventListener('pointerdown', unlock);
     document.addEventListener('keydown', unlock);
 
     const sndBtn = U.$('#btn-sound');
@@ -49,7 +49,7 @@
     paintSound();
 
     /* clique discreto em qualquer controle da interface */
-    document.addEventListener('mousedown', e => {
+    document.addEventListener('pointerdown', e => {
       if (e.target.closest('.btn,.dockbtn,.tab,.sw-item,.srv-nav button,.spd,.list-item,tr.clickable,.map-node')) {
         Snd.click();
       }
@@ -99,8 +99,9 @@
     U.$$('.dockbtn').forEach(b => {
       b.addEventListener('click', () => {
         const app = b.dataset.app;
-        if (UI.isOpen(app)) { UI.close(app); b.classList.remove('on'); }
-        else { APPS[app](); b.classList.add('on'); }
+        if (!UI.isOpen(app)) { APPS[app](); b.classList.add('on'); }
+        else if (UI.isFocused(app)) { UI.close(app); b.classList.remove('on'); }
+        else { UI.focus(app); UI.dirty(); }   /* estava atras: traz para a frente */
       });
     });
 
