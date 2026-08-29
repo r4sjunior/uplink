@@ -75,8 +75,40 @@ A versão da ferramenta precisa ser **≥** ao nível da camada.
 | **Redes sociais** | `social_post` · `social_wipe` · `social_dm` |
 | **Videomonitoramento** | `cam_footage` · `cam_observe` · `cam_loop` |
 
-Os alvos são escolhidos por um orçamento de segurança proporcional ao seu rating —
-um novato não recebe um mainframe blindado.
+### Curva de dificuldade
+
+Os alvos passam por dois tetos, não um só. O **orçamento total** limita a soma das
+camadas; o **teto por camada** limita o nível de cada uma — porque proxy e firewall só
+caem com um bypass de versão igual ou maior, e o preço desses programas dobra a cada
+versão. Nada adianta oferecer um firewall 2 (Firewall_Bypass v2 = 6.300c) a quem tem
+3.000c no banco.
+
+| Rating | Proxy / Firewall | Monitor | Tipos ofertados |
+|---|---|---|---|
+| 0 Registered | 1 | ≤ 3 | 2 |
+| 1 Beginner | 1 | ≤ 3 | 4 |
+| 2–3 Novice / Confident | 2 | ≤ 4 | 7–8 |
+| 4–5 Intermediate / Skilled | 3 | ≤ 5 | 11 |
+| 6–7 Experienced | 4 | ≤ 5 | 13 |
+| 8+ Uber-Skilled → TERMINAL | 5 | ≤ 5 | 13 |
+
+O monitor anda dois degraus à frente: ele não barra nenhuma ação, só encurta o tempo
+até o trace fechar. Regras que valem junto:
+
+- **Rating 0** só recebe alvos que o kit inicial vence sozinho — firewall 0 nos
+  contratos de cópia, proxy 0 nos de exclusão. Nenhuma compra obrigatória.
+- Contratos de **entrega** só apontam para arquivos dentro do alcance do seu
+  `Decrypter` atual: você nunca recebe um anexo que não conseguiria abrir.
+- Bancos, mainframes e as bases globais (IAD, GCD, SSD) têm segurança fixa e alta —
+  eles não são "amaciados", apenas aparecem mais tarde.
+
+### Contrato de estreia
+
+Toda partida começa com um trabalho garantido no topo da lista: **uma gravação do
+Northgate Mall Security Office**, um CFTV antigo com senha de fábrica, *sem firewall e
+sem proxy*, trace lento e arquivo pequeno sem criptografia. Serve de visita guiada à
+central de vídeo — dá para abrir o mosaico, ampliar uma câmera e olhar com calma — e
+o próprio texto do contrato traz o passo a passo, do bounce até apagar o log.
 
 ### Redes sociais
 

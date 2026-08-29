@@ -96,16 +96,20 @@
   D.SOCIAL_NETS = [
     { key: 'chirp', name: 'Chirp', srv: 'Chirp Social Cluster', domain: 'chirp.net',
       kind: 'micro', tag: 'O mundo inteiro em 200 caracteres', ip: '77.14.0.10',
-      city: 'San Jose', x: 12, y: 39, glyph: '~', accent: '#4fd8ff', accent2: '#12546b' },
+      city: 'San Jose', x: 12, y: 39, glyph: '~', accent: '#4fd8ff', accent2: '#12546b',
+      sec: { proxy: 1, firewall: 1, monitor: 2 } },
     { key: 'fotogram', name: 'Fotogram', srv: 'Fotogram Media Cluster', domain: 'fotogram.io',
       kind: 'photo', tag: 'Sua vida, com filtro', ip: '77.14.0.20',
-      city: 'Los Angeles', x: 12, y: 41, glyph: '#', accent: '#ff5fa2', accent2: '#5f1b46' },
+      city: 'Los Angeles', x: 12, y: 41, glyph: '#', accent: '#ff5fa2', accent2: '#5f1b46',
+      sec: { proxy: 2, firewall: 1, monitor: 3 } },
     { key: 'linkwork', name: 'LinkWork', srv: 'LinkWork Professional Network', domain: 'linkwork.com',
       kind: 'pro', tag: 'Onde as carreiras acontecem', ip: '77.14.0.30',
-      city: 'Chicago', x: 22, y: 34, glyph: '=', accent: '#5aa9ff', accent2: '#173d66' },
+      city: 'Chicago', x: 22, y: 34, glyph: '=', accent: '#5aa9ff', accent2: '#173d66',
+      sec: { proxy: 2, firewall: 2, monitor: 3 } },
     { key: 'vibe', name: 'VIBE', srv: 'VIBE Network Core', domain: 'vibe.social',
       kind: 'feed', tag: 'Fique perto de quem importa', ip: '77.14.0.40',
-      city: 'Berlin', x: 51, y: 28, glyph: '@', accent: '#8cf06a', accent2: '#245c1d' }
+      city: 'Berlin', x: 51, y: 28, glyph: '@', accent: '#8cf06a', accent2: '#245c1d',
+      sec: { proxy: 4, firewall: 3, monitor: 4 } }
   ];
 
   /* posts corriqueiros */
@@ -222,7 +226,7 @@
     { name: 'Metro Transit Surveillance Grid', city: 'Tokyo', x: 86, y: 35 },
     { name: 'Harbor Authority CCTV', city: 'Singapore', x: 76, y: 55 },
     { name: 'Civic Center Camera Control', city: 'Chicago', x: 22, y: 34 },
-    { name: 'Northgate Mall Security Office', city: 'London', x: 46, y: 28 },
+    { name: 'Northgate Mall Security Office', city: 'London', x: 46, y: 28, easy: true },
     { name: 'Aeroporto Internacional - CFTV', city: 'Rio de Janeiro', x: 35, y: 67 },
     { name: 'Ringstrasse Traffic Watch', city: 'Berlin', x: 51, y: 28 }
   ];
@@ -369,9 +373,9 @@
       diff: 1, reward: [2000, 4800] },
     { id: 'trace_hacker', minRating: 1, title: 'Rastrear um hacker a partir dos logs',
       diff: 2, reward: [3000, 6500] },
-    { id: 'change_academic', minRating: 2, title: 'Alterar registro academico',
+    { id: 'change_academic', minRating: 4, title: 'Alterar registro academico',
       diff: 2, reward: [4000, 8000] },
-    { id: 'change_criminal', minRating: 3, title: 'Alterar registro criminal',
+    { id: 'change_criminal', minRating: 6, title: 'Alterar registro criminal',
       diff: 3, reward: [6000, 13000] },
     { id: 'destroy_system', minRating: 4, title: 'Destruir um sistema inteiro',
       diff: 4, reward: [12000, 26000] },
@@ -379,19 +383,19 @@
       diff: 5, reward: [25000, 60000] },
 
     /* --- redes sociais --- */
-    { id: 'social_post', minRating: 1, title: 'Publicar em nome de outra pessoa',
+    { id: 'social_post', minRating: 2, title: 'Publicar em nome de outra pessoa',
       diff: 2, reward: [3200, 7000] },
-    { id: 'social_wipe', minRating: 1, title: 'Apagar o rastro de alguem numa rede social',
+    { id: 'social_wipe', minRating: 2, title: 'Apagar o rastro de alguem numa rede social',
       diff: 2, reward: [3500, 7600] },
     { id: 'social_dm', minRating: 3, title: 'Extrair mensagens privadas',
       diff: 3, reward: [6500, 14000] },
 
     /* --- videomonitoramento --- */
-    { id: 'cam_footage', minRating: 2, title: 'Roubar gravacao de videomonitoramento',
+    { id: 'cam_footage', minRating: 1, title: 'Roubar gravacao de videomonitoramento',
       diff: 2, reward: [4200, 9000] },
-    { id: 'cam_observe', minRating: 3, title: 'Vigiar uma camera ao vivo',
+    { id: 'cam_observe', minRating: 2, title: 'Vigiar uma camera ao vivo',
       diff: 3, reward: [7000, 15000] },
-    { id: 'cam_loop', minRating: 5, title: 'Congelar as cameras durante uma invasao fisica',
+    { id: 'cam_loop', minRating: 4, title: 'Congelar as cameras durante uma invasao fisica',
       diff: 4, reward: [14000, 30000] }
   ];
 

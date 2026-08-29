@@ -279,10 +279,10 @@
         city: net.city, x: net.x, y: net.y,
         sec: {
           pass: makePassword(rng, true),
-          proxy: rng.int(2, 4), firewall: rng.int(1, 3), monitor: rng.int(2, 4)
+          proxy: net.sec.proxy, firewall: net.sec.firewall, monitor: net.sec.monitor
         },
         files: files,
-        traceBase: 85 + rng.int(-15, 20),
+        traceBase: 130 - net.sec.monitor * 12 + rng.int(-10, 15),
         screens: ['socialnet', 'files', 'logs'],
         publicList: true,
         notes: net.tag + '  (' + net.domain + ')'
@@ -295,22 +295,32 @@
     /* --- videomonitoramento --- */
     world.cctv = [];
     function addCCTV(o) {
-      const cams = CCTV.makeCams(rng, rng.int(4, 8));
+      const cams = CCTV.makeCams(rng, o.easy ? rng.int(4, 6) : rng.int(4, 8));
+      const files = CCTV.makeRecordings(rng, cams, now);
+      /* o sistema de treino nao guarda nada criptografado e os arquivos
+         cabem na memoria do gateway inicial */
+      if (o.easy) files.forEach(f => { f.enc = 0; f.size = rng.int(2, 4); });
       const srv = add(baseServer(rng, {
         name: o.name, type: 'cctv', corp: o.corp || null,
         city: o.city, x: o.x, y: o.y,
-        sec: {
-          pass: makePassword(rng, rng.chance(0.6)),
-          proxy: rng.int(1, 4), firewall: rng.int(1, 3), monitor: rng.int(2, 5)
-        },
-        files: CCTV.makeRecordings(rng, cams, now),
-        traceBase: 75 + rng.int(-18, 22),
+        sec: o.easy
+          ? { pass: rng.pick(D.COMMON_PASS), proxy: 0, firewall: 0, monitor: 1 }
+          : {
+            pass: makePassword(rng, rng.chance(0.6)),
+            proxy: rng.int(1, 4), firewall: rng.int(1, 3), monitor: rng.int(1, 4)
+          },
+        files: files,
+        traceBase: o.easy ? 260 : 75 + rng.int(-18, 22),
         screens: ['cctv', 'files', 'logs'],
-        notes: 'Gravador digital de video. ' + cams.length + ' canais.'
+        notes: o.easy
+          ? 'Gravador digital de video. ' + cams.length + ' canais. Instalacao antiga, sem firewall.'
+          : 'Gravador digital de video. ' + cams.length + ' canais.'
       }));
       srv.cams = cams;
+      srv.easy = !!o.easy;
       seedLogs(rng, srv, now);
       world.cctv.push(srv.ip);
+      if (o.easy) world.cctvEasy = srv.ip;
       return srv;
     }
     rng.pickMany(world.corps.filter(c => c.size >= 2), 7).forEach(c => {
@@ -321,7 +331,7 @@
       });
     });
     D.CCTV_SITES.forEach(site => {
-      addCCTV({ name: site.name, city: site.city, x: site.x, y: site.y });
+      addCCTV({ name: site.name, city: site.city, x: site.x, y: site.y, easy: site.easy });
     });
 
     /* --- hackers rivais (alvos de missao trace_hacker) --- */
@@ -331,7 +341,8 @@
 
     world.special = {
       iad: iad.ip, gcd: gcd.ip, ssd: ssd.ip,
-      internic: internic.ip, uplinkPub: uplinkPub.ip, test: uplinkTest.ip
+      internic: internic.ip, uplinkPub: uplinkPub.ip, test: uplinkTest.ip,
+      cctv: world.cctvEasy || (world.cctv.length ? world.cctv[0] : null)
     };
 
     return world;

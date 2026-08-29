@@ -117,6 +117,8 @@
         '     sua licenca sera revogada e seu gateway destruido.\n\n' +
         'Comece pela Uplink Test Machine (' + G.world.special.test + ').\n' +
         'Senha: rosebud. O monitor dela esta desligado.\n\n' +
+        'Depois abra UPLINK IS > CONTRATOS: separamos um trabalho de\n' +
+        'estreia que o seu gateway ja da conta sozinho, sem comprar nada.\n\n' +
         '-- Uplink Internal Services'
     });
     G.save();

@@ -9,34 +9,77 @@
 
   function rng() { return U.makeRNG((Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0); }
 
-  /* servidores invadiveis; com maxDiff, filtra por seguranca compativel
-     com o rating atual para nao jogar um novato contra um mainframe */
+  const diffOf = s => (s.sec.proxy || 0) + (s.sec.firewall || 0) + (s.sec.monitor || 0);
+
+  /* teto de seguranca TOTAL aceitavel para o rating do jogador */
+  function secBudget() { return 2 + G.ratingIndex() * 2; }
+
+  /* Teto de NIVEL de cada camada que exige ferramenta.
+     Proxy e firewall so caem com um bypass/disable de versao >= ao nivel,
+     e o preco desses programas dobra a cada versao - entao o nivel maximo
+     sobe devagar, um degrau a cada dois ratings.
+     O monitor fica de fora: ele nao barra nenhuma acao, so acelera o
+     trace, e ja pesa no orcamento total acima. */
+  function maxLayer() { return U.clamp(1 + Math.floor(G.ratingIndex() / 2), 1, 5); }
+  function layerOk(s) {
+    const L = maxLayer();
+    return (s.sec.proxy || 0) <= L && (s.sec.firewall || 0) <= L &&
+      /* o monitor nao barra acao nenhuma, mas define quanto tempo o
+         agente tem antes do trace fechar - por isso anda um pouco a frente */
+      (s.sec.monitor || 0) <= L + 2;
+  }
+
+  /* aplica o teto por camada e depois o orcamento total, afrouxando o
+     orcamento (nunca o teto) ate ter alvos suficientes */
+  function fitTargets(list, want) {
+    if (!list.length) return list;
+    const fit = list.filter(layerOk);
+    const base = fit.length ? fit : list;
+    for (let d = secBudget(); d <= 16; d++) {
+      const pool = base.filter(s => diffOf(s) <= d);
+      if (pool.length >= (want || 1)) return pool;
+    }
+    return base;
+  }
+
+  /* servidores invadiveis, filtrados pelo rating atual */
   function hackableServers(maxDiff) {
     const all = Object.values(G.world.servers).filter(s =>
       (s.type === 'internal' || s.type === 'mainframe') && s.files && s.files.length > 0);
     if (maxDiff === undefined) return all;
-    const diff = s => (s.sec.proxy || 0) + (s.sec.firewall || 0) + (s.sec.monitor || 0);
-    /* comeca no teto do rating e afrouxa ate ter alvos suficientes para
-       que as ofertas nao apontem todas para o mesmo servidor */
-    for (let d = maxDiff; d <= 16; d++) {
-      const pool = all.filter(s => diff(s) <= d);
-      if (pool.length >= 8) return pool;
-    }
-    return all;
+    return fitTargets(all, 8);
   }
 
-  /* teto de seguranca aceitavel para o rating do jogador */
-  function secBudget() { return 2 + G.ratingIndex() * 2; }
-
-  /* escolhe um servidor de uma lista respeitando o teto de seguranca */
+  /* escolhe um servidor de uma lista respeitando os dois tetos */
   function pickByBudget(list, r) {
     if (!list.length) return null;
-    const diff = s => (s.sec.proxy || 0) + (s.sec.firewall || 0) + (s.sec.monitor || 0);
-    for (let d = secBudget(); d <= 16; d++) {
-      const pool = list.filter(s => diff(s) <= d);
-      if (pool.length) return r.pick(pool);
-    }
-    return r.pick(list);
+    return r.pick(fitTargets(list, 1));
+  }
+
+  /* No rating zero o agente so tem Password_Breaker, File_Copier,
+     File_Deleter e Log_Deleter: os primeiros alvos precisam ser vencidos
+     com isso, sem depender de comprar um bypass. */
+  function starterPool(pool, layer) {
+    if (G.ratingIndex() > 0) return pool;
+    const easy = pool.filter(s => (s.sec[layer] || 0) === 0);
+    return easy.length ? easy : pool;
+  }
+
+  /* prefere servidores com pelo menos um arquivo dentro do alcance do
+     Decrypter atual - contrato de entrega com anexo ilegivel nao fecha */
+  function readablePool(pool) {
+    const v = G.swVersion('decrypter');
+    const ok = pool.filter(s => (s.files || []).some(f => (f.enc || 0) <= v));
+    return ok.length ? ok : pool;
+  }
+
+  /* nao manda buscar arquivo que o jogador nao consegue descriptografar */
+  function pickFile(srv, r) {
+    const v = G.swVersion('decrypter');
+    const easy = srv.files.filter(f => (f.enc || 0) <= v);
+    if (easy.length) return r.pick(easy);
+    /* nenhum legivel: entrega o menos criptografado do lote */
+    return srv.files.slice().sort((a, b) => (a.enc || 0) - (b.enc || 0))[0];
   }
 
   /* contratos cujo pagamento depende de um anexo enviado por e-mail */
@@ -76,8 +119,8 @@
 
     switch (type.id) {
       case 'steal_file': {
-        const srv = r.pick(hackableServers(secBudget()));
-        const f = r.pick(srv.files);
+        const srv = r.pick(readablePool(starterPool(hackableServers(secBudget()), 'firewall')));
+        const f = pickFile(srv, r);
         m.targetIp = srv.ip; m.targetName = srv.name;
         m.fileName = f.name; m.fileId = f.id;
         m.title = 'Roubar "' + f.name + '"';
@@ -95,7 +138,7 @@
         break;
       }
       case 'delete_file': {
-        const srv = r.pick(hackableServers(secBudget()));
+        const srv = r.pick(starterPool(hackableServers(secBudget()), 'proxy'));
         const f = r.pick(srv.files);
         m.targetIp = srv.ip; m.targetName = srv.name;
         m.fileName = f.name; m.fileId = f.id;
@@ -107,8 +150,9 @@
         break;
       }
       case 'destroy_system': {
-        const cands = hackableServers().filter(s => s.type === 'mainframe');
-        const srv = r.pick(cands.length ? cands : hackableServers());
+        const mfs = hackableServers().filter(s => s.type === 'mainframe');
+        const srv = pickByBudget(mfs.length ? mfs : hackableServers(), r);
+        if (!srv) return null;
         m.targetIp = srv.ip; m.targetName = srv.name;
         m.title = 'Destruir ' + srv.name;
         m.desc =
@@ -168,7 +212,7 @@
       }
       case 'trace_hacker': {
         const h = r.pick(G.world.hackers);
-        const srv = r.pick(hackableServers(secBudget()));
+        const srv = r.pick(starterPool(hackableServers(secBudget()), 'firewall'));
         m.hackerHandle = h.handle;
         m.answer = h.ip;
         m.targetIp = srv.ip; m.targetName = srv.name;
@@ -262,9 +306,9 @@
 
       /* =============== VIDEOMONITORAMENTO =============== */
       case 'cam_footage': {
-        const srv = pickByBudget(CCTV.servers().filter(x => x.files.length), r);
+        const srv = pickByBudget(readablePool(CCTV.servers().filter(x => x.files.length)), r);
         if (!srv) return null;
-        const f = r.pick(srv.files);
+        const f = pickFile(srv, r);
         const cam = (srv.cams || []).find(c => c.id === f.camId);
         m.targetIp = srv.ip; m.targetName = srv.name;
         m.fileName = f.name; m.fileId = f.id;
@@ -322,8 +366,9 @@
       }
 
       case 'steal_money': {
-        const bankIp = r.pick(G.world.banks);
-        const bank = G.srv(bankIp);
+        const bank = pickByBudget(G.world.banks.map(ip => G.srv(ip)).filter(Boolean), r);
+        if (!bank) return null;
+        const bankIp = bank.ip;
         const cands = bank.accounts.filter(a => !a.isPlayer && a.balance > 50000);
         const acc = cands.length ? r.pick(cands) : r.pick(bank.accounts);
         m.bankIp = bankIp; m.targetIp = bankIp; m.targetName = bank.name;
@@ -375,8 +420,74 @@
     return m;
   };
 
+  /* =========================================================
+     CONTRATO DE ESTREIA
+     Um trabalho de camera desenhado para ser vencido com o kit
+     inicial: senha de fabrica, sem firewall e sem proxy. Serve de
+     visita guiada a central de video.
+     ========================================================= */
+  Missions.starterCam = function () {
+    const ip = G.world.special && G.world.special.cctv;
+    const srv = ip ? G.srv(ip) : null;
+    if (!srv || !srv.cams || !srv.files.length) return null;
+
+    const r = rng();
+    const employer = corpName(r);
+    let f = srv.files.filter(x => !x.enc).sort((a, b) => a.size - b.size)[0];
+    if (!f) { f = srv.files[0]; f.enc = 0; }
+    const cam = srv.cams.find(c => c.id === f.camId) || srv.cams[0];
+
+    const m = {
+      id: 'm' + U.uid(),
+      type: 'cam_footage',
+      starter: true,
+      employer: employer,
+      email: 'contratos@' + employer.toLowerCase().replace(/[^a-z]/g, '') + '.net',
+      payment: 2400,
+      points: 2,
+      neuro: 1,
+      deadline: G.time + 10 * 24 * 60,
+      posted: G.time,
+      accepted: false,
+      status: 'open',
+      targetIp: srv.ip,
+      targetName: srv.name,
+      fileName: f.name,
+      fileId: f.id,
+      title: 'PRIMEIRO TRABALHO: gravacao de ' + srv.name
+    };
+    m.desc =
+      'Trabalho de estreia, e por isso e barato: o alvo e um sistema\n' +
+      'antigo de CFTV que nunca foi atualizado.\n\n' +
+      'ALVO   : ' + srv.name + ' (' + srv.ip + ')\n' +
+      'ARQUIVO: ' + f.name + '  (' + f.size + 'Gq, sem criptografia)\n' +
+      'CAMERA : ' + cam.label + ' - ' + cam.zone + '\n\n' +
+      'SEM FIREWALL. SEM PROXY. A senha e de fabrica.\n' +
+      'O Password_Breaker que veio no seu gateway resolve sozinho.\n\n' +
+      '1. ROTA: ponha dois ou tres saltos antes do alvo e conecte.\n' +
+      '2. Rode o Password_Breaker no painel da direita.\n' +
+      '3. Aba CAMERAS: o mosaico abre ao vivo porque nao ha firewall.\n' +
+      '   Clique numa camera para ampliar - vale conhecer o sistema.\n' +
+      '4. Aba GRAVACOES: copie ' + f.name + '.\n' +
+      '5. LOG SERVER: apague o registro da SUA conexao antes de sair.\n' +
+      '6. Desconecte e envie o arquivo por e-mail para ' + m.email + '.\n\n' +
+      'O monitor esta ligado, mas o trace desse predio e lento.\n' +
+      'Da tempo de olhar as cameras com calma.';
+    m.body =
+      'Voce e novo e nos sabemos disso. Comece por aqui.\n\n' +
+      m.desc + '\n\n' +
+      'PAGAMENTO: ' + U.credits(m.payment) + '\n' +
+      'PRAZO: ' + U.fmtDate(m.deadline) + '\n\n' +
+      'Se sobreviver a este, tem mais.\n\n-- ' + m.employer;
+    return m;
+  };
+
   Missions.refresh = function (initial) {
-    const want = initial ? 6 : 1;
+    if (initial) {
+      const first = Missions.starterCam();
+      if (first) G.missions.available.push(first);
+    }
+    const want = initial ? 5 : 1;
     for (let i = 0; i < want; i++) {
       const m = Missions.generate();
       if (m) G.missions.available.push(m);
@@ -384,7 +495,11 @@
     /* expira ofertas antigas */
     G.missions.available = G.missions.available.filter(m => m.deadline > G.time);
     if (G.missions.available.length > 12) {
-      G.missions.available.splice(0, G.missions.available.length - 12);
+      /* o contrato de estreia nunca e descartado pelo limite da fila */
+      const keep = G.missions.available.filter(m => m.starter);
+      const rest = G.missions.available.filter(m => !m.starter);
+      const room = Math.max(0, 12 - keep.length);
+      G.missions.available = keep.concat(rest.slice(Math.max(0, rest.length - room)));
     }
     lastGen = G.time;
   };

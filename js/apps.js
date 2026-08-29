@@ -976,7 +976,17 @@
 '   Nos contratos de vigilancia, espere a ronda: um funcionario aparece\n' +
 '   na antecamara do cofre e digita o codigo no teclado. O sistema faz\n' +
 '   zoom digital nos digitos. Anote e responda no painel do contrato.\n\n' +
-'11. DICAS\n' +
+'11. PROGRESSAO\n' +
+'   As ofertas acompanham o seu rating em dois eixos: a soma das camadas\n' +
+'   do alvo e o nivel maximo de cada uma. Como Proxy_Bypass e\n' +
+'   Firewall_Bypass dobram de preco a cada versao, o nivel maximo sobe\n' +
+'   um degrau a cada dois ratings - no comeco nada passa de nivel 1.\n' +
+'   O monitor anda a frente: ele nao trava acao nenhuma, so encurta o\n' +
+'   tempo ate o trace fechar.\n' +
+'   No rating zero os alvos sao vencidos com o kit que veio no gateway,\n' +
+'   sem comprar nada, e nenhum contrato de entrega pede arquivo alem do\n' +
+'   alcance do seu Decrypter.\n\n' +
+'12. DICAS\n' +
 '   - Treine na Uplink Test Machine: senha rosebud, sem monitor.\n' +
 '   - IP_Probe revela a seguranca do alvo ANTES de conectar.\n' +
 '   - Senhas de contas bancarias ficam guardadas nos servidores\n' +
