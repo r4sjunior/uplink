@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05080a">
+<title>UPLINK :: Trust Is A Weakness</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div id="crt"></div>
+<div id="scanlines"></div>
+
+<!-- ============ BOOT ============ -->
+<section id="screen-boot" class="screen active">
+  <pre id="boot-text"></pre>
+</section>
+
+<!-- ============ LOGIN ============ -->
+<section id="screen-login" class="screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>UPLINK</h1>
+      <p class="tagline">Corporation &mdash; <em>Trust Is A Weakness</em></p>
+    </div>
+    <div class="login-body">
+      <p class="login-msg" id="login-msg">Conexão segura estabelecida. Identifique-se, agente.</p>
+      <label>HANDLE</label>
+      <input id="login-handle" maxlength="16" autocomplete="off" spellcheck="false" placeholder="ex: ghost_in_wire">
+      <label>SENHA</label>
+      <input id="login-pass" type="password" maxlength="24" autocomplete="off" placeholder="qualquer coisa">
+      <div class="login-buttons">
+        <button id="btn-newuser" class="btn btn-primary">NOVO AGENTE</button>
+        <button id="btn-loadgame" class="btn">CARREGAR</button>
+      </div>
+      <p class="login-foot">Todas as ações são registradas. Boa sorte.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DESKTOP ============ -->
+<section id="screen-desktop" class="screen">
+
+  <header id="topbar">
+    <div class="tb-left">
+      <span class="tb-logo">UPLINK</span>
+      <span class="tb-handle" id="tb-handle">—</span>
+    </div>
+    <div class="tb-center">
+      <span class="tb-item">CRÉDITOS <b id="tb-credits">0c</b></span>
+      <span class="tb-item">RATING <b id="tb-rating">Registered</b></span>
+      <span class="tb-item">NEURO <b id="tb-neuro">Harmless</b></span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-clock" id="tb-clock">--:-- --/--/----</span>
+      <span class="speed-ctl">
+        <button class="spd" data-spd="0">||</button>
+        <button class="spd active" data-spd="1">1x</button>
+        <button class="spd" data-spd="5">5x</button>
+        <button class="spd" data-spd="20">20x</button>
+      </span>
+      <button id="btn-sound" class="btn btn-mini" title="Ligar/desligar som">SOM</button>
+      <button id="btn-save" class="btn btn-mini">SALVAR</button>
+    </div>
+  </header>
+
+  <div id="desktop">
+    <div id="wallpaper">
+      <div class="wp-grid"></div>
+      <div class="wp-text">
+        <pre>
+  ██╗   ██╗██████╗ ██╗     ██╗███╗   ██╗██╗  ██╗
+  ██║   ██║██╔══██╗██║     ██║████╗  ██║██║ ██╔╝
+  ██║   ██║██████╔╝██║     ██║██╔██╗ ██║█████╔╝
+  ██║   ██║██╔═══╝ ██║     ██║██║╚██╗██║██╔═██╗
+  ╚██████╔╝██║     ███████╗██║██║ ╚████║██║  ██╗
+   ╚═════╝ ╚═╝     ╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝</pre>
+        <p>GATEWAY ONLINE &mdash; aguardando ordens</p>
+      </div>
+    </div>
+    <div id="windows"></div>
+  </div>
+
+  <nav id="dock">
+    <div id="dock-apps">
+      <button class="dockbtn" data-app="email"><span class="dk-ico">✉</span><span>E-MAIL</span><b class="badge" id="badge-email"></b></button>
+      <button class="dockbtn" data-app="uis"><span class="dk-ico">⌘</span><span>UPLINK IS</span><b class="badge" id="badge-uis"></b></button>
+      <button class="dockbtn" data-app="missions"><span class="dk-ico">▤</span><span>CONTRATOS</span></button>
+      <button class="dockbtn" data-app="links"><span class="dk-ico">⛓</span><span>LINKS</span></button>
+      <button class="dockbtn" data-app="map"><span class="dk-ico">◍</span><span>ROTA</span></button>
+      <button class="dockbtn" data-app="gateway"><span class="dk-ico">▣</span><span>GATEWAY</span></button>
+      <button class="dockbtn" data-app="finance"><span class="dk-ico">$</span><span>FINANÇAS</span></button>
+      <button class="dockbtn" data-app="help"><span class="dk-ico">?</span><span>MANUAL</span></button>
+    </div>
+    <div class="dock-spacer"></div>
+    <div id="conn-status" class="conn-idle">DESCONECTADO</div>
+  </nav>
+
+  <!-- barra de trace global -->
+  <div id="tracebar" class="hidden">
+    <span class="tr-label">TRACE EM ANDAMENTO</span>
+    <div class="tr-track"><div class="tr-fill" id="tr-fill"></div></div>
+    <span class="tr-time" id="tr-time">--</span>
+  </div>
+</section>
+
+<!-- ============ GAME OVER ============ -->
+<section id="screen-over" class="screen">
+  <div class="over-box">
+    <h1 id="over-title">CONEXÃO ENCERRADA</h1>
+    <pre id="over-text"></pre>
+    <button id="btn-restart" class="btn btn-primary">REINICIAR</button>
+  </div>
+</section>
+
+<div id="toasts"></div>
+
+<script src="js/util.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/state.js"></script>
+<script src="js/connection.js"></script>
+<script src="js/software.js"></script>
+<script src="js/missions.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/apps.js"></script>
+<script src="js/server_ui.js"></script>
+<script src="js/social.js"></script>
+<script src="js/cctv.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

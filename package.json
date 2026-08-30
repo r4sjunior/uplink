@@ -1,0 +1,16 @@
+{
+  "name": "uplink-3d",
+  "version": "2.0.0",
+  "private": true,
+  "description": "UPLINK :: Trust Is A Weakness - simulador hacker AAA em ThreeJS",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/serve.js",
+    "shot": "node tools/shot.js",
+    "vendor": "node tools/vendor.js"
+  },
+  "devDependencies": {
+    "three": "^0.180.0",
+    "puppeteer": "^24.10.0"
+  }
+}

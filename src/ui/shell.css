@@ -1,0 +1,21 @@
+/* Camada HTML: existe só para hospedar o canvas 3D e a cortina de
+   carregamento. Toda a interface do jogo é desenhada na Surface. */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: #04070a; overflow: hidden; }
+body { font: 13px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #cfe8dd; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+#preload {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: radial-gradient(120% 90% at 50% 40%, #0a1016 0%, #04070a 70%);
+  transition: opacity .7s ease .15s, visibility 0s linear .9s;
+}
+#preload.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.pl-inner { text-align: center; }
+.pl-mark { font-size: 30px; letter-spacing: .55em; color: #39ff9e; text-shadow: 0 0 22px rgba(57,255,158,.45); }
+.pl-bar { width: 240px; height: 2px; margin: 22px auto 12px; background: #12211c; overflow: hidden; }
+.pl-bar i { display: block; height: 100%; width: 35%; background: #39ff9e; animation: pl 1.15s cubic-bezier(.6,0,.4,1) infinite; }
+@keyframes pl { 0% { transform: translateX(-100%);} 100% { transform: translateX(340%);} }
+.pl-sub { font-size: 11px; letter-spacing: .3em; color: #4d6a5f; text-transform: uppercase; }
