@@ -1,0 +1,16 @@
+import * as W from '../../src/core/world.js';
+import { S, setState, emptyState } from '../../src/core/state.js';
+const w = W.generate(12345, 'teste');
+S.world = w;
+const srvs = Object.values(w.servers);
+console.log('servidores:', srvs.length);
+console.log('corporações:', w.corps.length, '| pessoas:', w.people.length, '| bancos:', w.banks.length);
+console.log('sociais:', w.socials.length, '| cftv:', w.cctv.length);
+const lans = srvs.filter(s=>s.lan).length;
+console.log('com LAN:', lans);
+const contas = w.banks.reduce((n,ip)=>n+w.servers[ip].accounts.length,0);
+console.log('contas bancárias:', contas);
+const pa = W.bindPlayer(12345, 'teste');
+console.log('conta do jogador:', pa.no, 'em', pa.bankName);
+console.log('exemplo:', JSON.stringify(srvs[8].name), srvs[8].ip, 'sec=', JSON.stringify(srvs[8].sec));
+console.log('alvo fácil:', JSON.stringify(W.pickTarget({int:(a,b)=>a,pick:a=>a[0],chance:()=>false,shuffle:a=>a}, {noFirewall:true, needFiles:true})?.name));

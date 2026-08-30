@@ -62,7 +62,7 @@ export const CFG = {
       aperture: 0.22,       /* máscara de fósforo (aperture grille) */
       chroma: 0.0016,       /* aberração cromática nas bordas */
       vignette: 0.42,
-      glare: 0.10,          /* reflexo do vidro */
+      glare: 0.045,         /* reflexo do vidro — o brilho principal vem do envMap */
       flicker: 0.012,
       persistence: 0.13     /* rastro de fósforo */
     },

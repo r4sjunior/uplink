@@ -37,8 +37,11 @@ export const CITY_BY_NAME = {};
 CITIES.forEach(c => { CITY_BY_NAME[c[0]] = { name: c[0], lat: c[1], lon: c[2] }; });
 
 /* projeção equirretangular -> percentuais do mapa 2D (0..100) */
+/* Projeção equirretangular NORMALIZADA (0..1). Toda a interface
+   multiplica por largura e altura do próprio painel, então precisa
+   ser fração, não porcentagem. */
 export function geoToXY(lat, lon) {
-  return { x: (lon + 180) / 360 * 100, y: (90 - lat) / 180 * 100 };
+  return { x: (lon + 180) / 360, y: (90 - lat) / 180 };
 }
 
 /* =========================================================
