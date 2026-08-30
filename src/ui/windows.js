@@ -350,17 +350,6 @@ export const Windows = {
     }
   },
 
-  /* Bloqueia a entrada abaixo das janelas: o desktop não recebe
-     clique que pertenceu a uma janela. */
-  blockBelow() {
-    for (let i = this.list.length - 1; i >= 0; i--) {
-      const w = this.list[i];
-      if (w.closing) continue;
-      UI.block('win:' + w.id + ':body', w.x - BORDER, w.y - BORDER,
-        w.w + BORDER * 2, w.h + BORDER * 2);
-    }
-  },
-
   reset() {
     this.list.length = 0;
     this._drag = null;

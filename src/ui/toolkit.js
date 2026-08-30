@@ -89,6 +89,8 @@ export const UI = {
   _pointerEvents: [],
   _sfxOn: true,
   _ultimoHover: 0,
+  _qa: false,
+  _qaRects: new Map(),
 
   /* =======================================================
      INSTALAÇÃO
@@ -141,6 +143,27 @@ export const UI = {
       Dirty.mark();
       return true;
     });
+  },
+
+  /** Liga o registro de caixas por identidade (só para testes). */
+  enableQA() { this._qa = true; return this; },
+
+  /** Caixa da última sondagem de uma identidade: [x, y, w, h]. */
+  rectOf(id) { return this._qaRects.get(id) || null; },
+
+  /** Centro da caixa de uma identidade, pronto para clicar. */
+  centerOf(id) {
+    const r = this._qaRects.get(id);
+    return r ? { x: Math.round(r[0] + r[2] / 2), y: Math.round(r[1] + r[3] / 2) } : null;
+  },
+
+  /** Todas as identidades sondadas neste quadro. */
+  qaIds() { return Array.from(this._qaRects.keys()); },
+
+  /** Há entrada esperando processamento? Usado pelo laço para não
+      atrasar tecla nem clique atrás da cadência de redesenho. */
+  pendingInput() {
+    return this._keyQueue.length > 0 || this._pointerEvents.length > 0;
   },
 
   /* =======================================================
@@ -250,6 +273,11 @@ export const UI = {
    * Registra o widget como candidato a "quente" do próximo frame.
    */
   probe(id, x, y, w, h) {
+    /* Em modo de QA, guarda a última caixa de cada identidade. É o que
+       permite um teste automatizado clicar em "o botão ACEITAR" em vez
+       de numa coordenada adivinhada — e um teste que adivinha
+       coordenada não testa nada, só registra o layout de ontem. */
+    if (this._qa) this._qaRects.set(id, [x, y, w, h]);
     let f = 0;
     const mx = this.mx, my = this.my;
     const over = this.inside && mx >= x && mx < x + w && my >= y && my < y + h && this.inClip(mx, my);

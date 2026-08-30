@@ -458,9 +458,12 @@ export const Shell = {
     /* --- papel de parede --- */
     this._papelDeParede(area, hud);
 
-    /* --- janelas --- */
+    /* --- janelas ---
+       Nada de bloquear o que está por baixo: no toolkit o último
+       `probe` do quadro vence, e a área de trabalho é desenhada ANTES
+       das janelas. O bloqueio rodava depois delas e roubava o alvo de
+       todo botão dentro de toda janela — nada era clicável. */
     Windows.draw(UI.pad(area, SPACE.sm, SPACE.sm), UI.dt);
-    Windows.blockBelow();
 
     /* --- moldura --- */
     this._barraSuperior(topo, hud);

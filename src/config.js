@@ -51,13 +51,13 @@ export const CFG = {
        encolher só multiplica o custo de redesenho e de envio para a
        GPU. Fica em 1, com um empurrão pequeno no tier alto. */
     ss: TIER === 'high' ? 1.25 : 1,
-    /* Taxa máxima de redesenho da interface (Hz). O 3D roda livre.
-       Redesenhar a interface inteira custa muito mais que renderizar
-       a cena, e 30 Hz é indistinguível em painéis estáticos. */
-    maxRedrawHz: 30,
-    /* Redesenhos disparados só por movimento do ponteiro (hover).
-       Separado do resto: mover o mouse não pode custar 60 quadros. */
-    hoverHz: 20
+    /* Taxa máxima de redesenho da interface (Hz).
+       O teto baixo existia para conter o envio da textura no modo
+       tubo. No modo plano não há envio nenhum e o desenho custa
+       frações de milissegundo, então não há motivo para segurar:
+       digitar e arrastar precisam de resposta imediata. */
+    maxRedrawHz: 60,
+    hoverHz: 60
   },
 
   /* --- renderer --- */
@@ -141,6 +141,13 @@ try {
   if (m && !q.has('crt') && !q.has('modo')) CFG.render.modo = m;
 } catch (e) { /* armazenamento bloqueado */ }
 
+/* No modo tubo cada redesenho vira um envio de textura para a GPU, e
+   aí o teto volta a fazer sentido. */
+if (CFG.render.modo === 'crt') {
+  CFG.ui.maxRedrawHz = 30;
+  CFG.ui.hoverHz = 20;
+}
+
 /* Preferência de qualidade escolhida pelo jogador, se houver.
    Vem depois dos parâmetros de URL para o depurador sempre vencer. */
 try {
@@ -156,8 +163,8 @@ export function aplicaQualidade(nivel) {
   CFG.qualidade = nivel;
   if (nivel === 'baixa') {
     CFG.ui.ss = 1;
-    CFG.ui.maxRedrawHz = 20;
-    CFG.ui.hoverHz = 12;
+    CFG.ui.maxRedrawHz = 40;
+    CFG.ui.hoverHz = 30;
     CFG.gfx.maxPixelRatio = 1;
     CFG.gfx.maxPixels = 1.2e6;
     CFG.gfx.shadows = false;
@@ -168,8 +175,8 @@ export function aplicaQualidade(nivel) {
     CFG.post.ao.enabled = false;
   } else if (nivel === 'media') {
     CFG.ui.ss = 1;
-    CFG.ui.maxRedrawHz = 30;
-    CFG.ui.hoverHz = 20;
+    CFG.ui.maxRedrawHz = 60;
+    CFG.ui.hoverHz = 60;
     CFG.gfx.maxPixelRatio = 1.25;
     CFG.gfx.maxPixels = 1.8e6;
     CFG.gfx.shadows = true;
@@ -178,8 +185,8 @@ export function aplicaQualidade(nivel) {
     CFG.post.ao.enabled = false;
   } else if (nivel === 'alta') {
     CFG.ui.ss = 1.25;
-    CFG.ui.maxRedrawHz = 30;
-    CFG.ui.hoverHz = 20;
+    CFG.ui.maxRedrawHz = 60;
+    CFG.ui.hoverHz = 60;
     CFG.gfx.maxPixelRatio = 1.75;
     CFG.gfx.maxPixels = 3.2e6;
     CFG.gfx.shadows = true;

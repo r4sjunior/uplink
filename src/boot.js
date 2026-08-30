@@ -7,6 +7,7 @@ import { CFG } from './config.js';
 import { Bus, EV } from './core/bus.js';
 import { Surface } from './ui/surface.js';
 import { Shell } from './ui/shell.js';
+import { UI } from './ui/toolkit.js';
 import { Game } from './core/game.js';
 import { Audio } from './audio/engine.js';
 import { PerfHUD } from './ui/perfhud.js';
@@ -73,7 +74,11 @@ function frame(now) {
   Shell.update(dt);
   redrawAcc += dt;
   const passo = 1 / CFG.ui.maxRedrawHz;
-  if (surface.dirty && redrawAcc >= passo) {
+  /* Tecla pendente fura a cadência. A latência de digitação é a única
+     que o dedo sente diretamente: esperar o próximo intervalo faz o
+     caractere parecer que "grudou". */
+  const urgente = UI.pendingInput();
+  if (surface.dirty && (urgente || redrawAcc >= passo)) {
     const desdeUltimo = redrawAcc;
     redrawAcc = 0;
     t = performance.now();
@@ -124,6 +129,7 @@ async function main() {
 
   await Game.init();                       /* mundo, save, dados */
   await Stage.init({ surface, host });     /* renderer, cena, monitor */
+  if (new URLSearchParams(location.search).has('qa')) UI.enableQA();
   await Shell.init({ surface });           /* interface */
   await Audio.init();                      /* som */
   PerfHUD.init();                          /* diagnóstico e qualidade (F1) */
