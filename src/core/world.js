@@ -534,6 +534,10 @@ export function pickTarget(rng, opts) {
     if (opts.type && s.type !== opts.type) return false;
     if (opts.types && !opts.types.includes(s.type)) return false;
     if (opts.needFiles && (!s.files || !s.files.length)) return false;
+    /* tetos separados: firewall barra leitura, proxy barra escrita, e
+       um agente pode ter ferramenta para um e não para o outro */
+    if (opts.maxFirewall !== undefined && s.sec.firewall > opts.maxFirewall) return false;
+    if (opts.maxProxy !== undefined && s.sec.proxy > opts.maxProxy) return false;
     if (opts.maxLayer !== undefined) {
       if (s.sec.proxy > opts.maxLayer || s.sec.firewall > opts.maxLayer) return false;
     }

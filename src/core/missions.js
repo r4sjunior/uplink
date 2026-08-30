@@ -20,7 +20,7 @@ import * as F from './fmt.js';
 import { Bus, EV } from './bus.js';
 import {
   S, R, srv, person, corp, addEmail, addPoints, addNeuro, bump,
-  ratingIndex, ratingName, flag
+  ratingIndex, ratingName, flag, swVersion
 } from './state.js';
 import * as World from './world.js';
 import * as Bank from './bank.js';
@@ -32,18 +32,115 @@ const BOARD_SIZE = 9;
 export const MAX_ACTIVE = 5;
 
 /* =========================================================
-   TETOS POR RATING
+   O QUE O AGENTE CONSEGUE VENCER HOJE
+
+   O teto por rating sozinho não funciona: rating é reputação, e o
+   que abre uma camada é FERRAMENTA. Um agente pode subir de rating
+   sem comprar nada e receber alvos que não tem como abrir — foi o
+   que acontecia, e o contrato virava parede em vez de desafio.
+
+   A conta certa parte do arsenal instalado. O rating entra só como
+   um segundo limite, para o mundo não escalar antes da hora.
    ========================================================= */
+function poder() {
+  /* contra o firewall vale o maior entre contornar e desativar */
+  const fw = Math.max(swVersion('firewall_bypass'), swVersion('firewall_disable'));
+  const px = Math.max(swVersion('proxy_bypass'), swVersion('proxy_disable'));
+  const senha = Math.max(swVersion('password_breaker'), swVersion('dictionary_hacker'));
+  return { fw, px, senha };
+}
+
+/* Preço da próxima versão de uma ferramenta, ou null se já é a máxima. */
+function precoDoProximo(id) {
+  const cat = D.SW_BY_ID[id];
+  const v = swVersion(id) + 1;
+  return (cat && v <= cat.maxv) ? D.swPrice(cat, v) : null;
+}
+
+/* Pode comprar a próxima versão AGORA, com folga?
+
+   Um alvo um degrau acima do arsenal é um convite para ir à loja;
+   dois degraus é parede. Mas "dá para comprar" não pode significar
+   "gastando o último crédito": o agente ainda precisa de dinheiro
+   para o resto do kit, e um contrato que exige zerar a conta é uma
+   armadilha, não uma escolha.
+
+   No rating 0 não há folga nenhuma — a primeira leva de contratos
+   tem que ser vencível com o kit que veio na caixa, sem compras. É
+   ali que se aprende o jogo, e aprender contra uma parede não é
+   aprender. */
+const FOLGA_COMPRA = 1.45;
+
+function alcancaComprando(id) {
+  if (ratingIndex() === 0) return false;
+  const p = precoDoProximo(id);
+  return p !== null && S.credits >= Math.round(p * FOLGA_COMPRA);
+}
+
 function limits() {
   const r = ratingIndex();
+  const arma = poder();
+
+  /* teto por rating: impede o mundo de escalar antes da reputação */
+  const porRating = r <= 1 ? 1 : r <= 3 ? 2 : r <= 5 ? 3 : r <= 7 ? 4 : 5;
+
+  /* teto por arsenal: o que já se vence, mais um degrau quando o
+     próximo bypass está ao alcance do saldo */
+  const fwMax = Math.min(porRating, arma.fw + (alcancaComprando('firewall_bypass') ? 1 : 0));
+  const pxMax = Math.min(porRating, arma.px + (alcancaComprando('proxy_bypass') ? 1 : 0));
+
   return {
-    /* teto de proxy e firewall */
-    layer: r === 0 ? 1 : r <= 1 ? 1 : r <= 3 ? 2 : r <= 5 ? 3 : r <= 7 ? 4 : 5,
-    /* o monitor anda dois degraus à frente: não barra nada, só encurta o trace */
+    firewall: Math.max(0, fwMax),
+    proxy: Math.max(0, pxMax),
+    /* o monitor não barra nada: só encurta o trace, então pode andar
+       à frente sem tornar nada impossível */
     monitor: r <= 1 ? 3 : r <= 3 ? 4 : 5,
     /* quantos tipos de contrato estão liberados */
     types: r === 0 ? 2 : r === 1 ? 4 : r <= 3 ? 8 : r <= 5 ? 11 : 13
   };
+}
+
+/* =========================================================
+   O QUE CADA TIPO DE CONTRATO EXIGE
+
+   Explícito de propósito. Antes isso estava espalhado em condições
+   soltas dentro de `targetFor`, e faltou justamente o caso que
+   quebrava: apagar um arquivo exige LER a lista de arquivos antes,
+   e ler exige vencer o firewall.
+   ========================================================= */
+const EXIGE = {
+  steal_file:      { ler: true,  escrever: false },
+  delete_file:     { ler: true,  escrever: true  },
+  destroy_system:  { ler: true,  escrever: true  },
+  trace_hacker:    { ler: true,  escrever: false },
+  change_academic: { ler: true,  escrever: true  },
+  change_criminal: { ler: true,  escrever: true  },
+  steal_money:     { ler: true,  escrever: true  },
+  social_post:     { ler: true,  escrever: true  },
+  social_wipe:     { ler: true,  escrever: true  },
+  social_dm:       { ler: true,  escrever: false },
+  cam_footage:     { ler: true,  escrever: false },
+  cam_observe:     { ler: true,  escrever: false },
+  cam_loop:        { ler: true,  escrever: true  }
+};
+
+/**
+ * O contrato é cumprível com o arsenal atual (ou com uma compra que
+ * o saldo cobre)? Vale para qualquer tipo.
+ *
+ * Detalhe que parece detalhe e não é: APAGAR O LOG exige escrita.
+ * Um contrato de só-leitura num alvo com proxy é tecnicamente
+ * cumprível, mas deixa o rastro inteiro para trás — então ele
+ * também entra na conta.
+ */
+export function viavel(typeId, alvo) {
+  if (!alvo) return false;
+  const req = EXIGE[typeId] || { ler: true, escrever: false };
+  const lim = limits();
+  if (req.ler && alvo.sec.firewall > lim.firewall) return false;
+  /* proxy barra escrita — e apagar o log é escrita, sempre */
+  if (alvo.sec.proxy > lim.proxy) return false;
+  return true;
 }
 
 function allowedTypes() {
@@ -81,21 +178,23 @@ function deadline(type) {
 
 /* Escolhe o alvo respeitando os dois tetos. */
 function targetFor(typeId, lim) {
-  const base = { maxLayer: lim.layer, maxMonitor: lim.monitor };
+  const base = {
+    maxFirewall: lim.firewall,
+    maxProxy: lim.proxy,
+    maxMonitor: lim.monitor
+  };
 
   switch (typeId) {
     case 'steal_file':
       /* no rating 0 o kit inicial não tem Firewall_Bypass: o alvo
          não pode ter firewall, senão o contrato é impossível */
       return World.pickTarget(R, Object.assign({}, base, {
-        needFiles: true, types: ['mainframe', 'files', 'public'],
-        noFirewall: ratingIndex() === 0
+        needFiles: true, types: ['mainframe', 'files', 'public']
       }));
     case 'delete_file':
     case 'destroy_system':
       return World.pickTarget(R, Object.assign({}, base, {
-        needFiles: true, types: ['mainframe', 'files', 'public'],
-        noProxy: ratingIndex() === 0
+        needFiles: true, types: ['mainframe', 'files', 'public']
       }));
     case 'trace_hacker':
       return World.pickTarget(R, Object.assign({}, base, { types: ['public', 'files', 'mainframe'] }));
@@ -113,8 +212,8 @@ function targetFor(typeId, lim) {
     case 'cam_observe':
     case 'cam_loop': {
       const pool = S.world.cctv.map(ip => srv(ip))
-        .filter(s => s.sec.proxy <= lim.layer && s.sec.firewall <= lim.layer);
-      return pool.length ? R.pick(pool) : srv(S.world.cctv[0]);
+        .filter(s => s.sec.proxy <= lim.proxy && s.sec.firewall <= lim.firewall);
+      return pool.length ? R.pick(pool) : null;
     }
     default:
       return World.pickTarget(R, base);
@@ -380,6 +479,10 @@ export function offer() {
   if (type.id === 'steal_file' && (!target.files || !target.files.length)) return null;
   if (type.id === 'cam_observe' && (!target.cams || !target.cams.length)) return null;
 
+  /* última linha de defesa: nenhum contrato sai do quadro sem ser
+     cumprível com o que o agente tem ou pode comprar hoje */
+  if (!viavel(type.id, target)) return null;
+
   const obj = objective(type.id, target);
   if (!obj || !obj.goal) return null;
 
@@ -437,8 +540,16 @@ export function refresh(force) {
    e arquivo pequeno sem criptografia. Serve de visita guiada.
    ========================================================= */
 export function firstContract() {
-  const target = srv(S.world.cctv.find(ip => srv(ip).sec.proxy === 0 && srv(ip).sec.firewall === 0))
-    || srv(S.world.cctv[0]);
+  /* O CFTV marcado como fácil na tabela é o desenhado para isto:
+     senha de fábrica, nenhuma camada, trace lento. Procurar "o
+     primeiro sem proxy nem firewall" pegava outro qualquer, com
+     monitor ligado e senha aleatória — a visita guiada virava prova. */
+  const facil = S.world.cctv
+    .map(ip => srv(ip))
+    .find(s => s && s.sec.proxy === 0 && s.sec.firewall === 0 && s.sec.monitor === 0);
+  const target = facil ||
+    srv(S.world.cctv.find(ip => srv(ip).sec.proxy === 0 && srv(ip).sec.firewall === 0)) ||
+    srv(S.world.cctv[0]);
   const f = target.files.find(x => !x.enc) || target.files[0];
 
   const m = {

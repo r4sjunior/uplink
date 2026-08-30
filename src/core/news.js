@@ -103,12 +103,23 @@ function publish(item) {
 }
 
 /* Um alvo que apanhou fica mais difícil: sobe uma camada até o teto
-   e renova a senha. É a razão de não se voltar duas vezes ao mesmo poço. */
+   e renova a senha. É a razão de não se voltar duas vezes ao mesmo poço.
+
+   Duas exceções, ambas por justiça com o jogador:
+   - servidor que é alvo de contrato ACEITO não endurece. Quem pegou
+     o trabalho tem direito a que ele continue possível; endurecer no
+     meio transforma um contrato aceito numa parede sem aviso;
+   - o endurecimento tem teto próprio (+2 sobre o original), senão
+     um mundo muito quente empurra tudo para o máximo e o jogo
+     estanca. */
 function hardenTarget(name) {
   const list = S.world ? Object.values(S.world.servers) : [];
+  const contratados = new Set((S.missions.active || []).map(m => m.targetIp));
   const hit = list.filter(s => s.name === name || (s.corp && s.corp === name));
   hit.forEach(s => {
     if (s.fixedSec) return;
+    if (contratados.has(s.ip)) return;
+    if ((s.hardened || 0) >= 2) return;
     if (s.sec.monitor < 5 && R.chance(0.7)) s.sec.monitor++;
     else if (s.sec.firewall < 5 && R.chance(0.5)) s.sec.firewall++;
     else if (s.sec.proxy < 5 && R.chance(0.5)) s.sec.proxy++;
