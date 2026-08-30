@@ -245,7 +245,12 @@ export const Shell = {
 
     /* toasts e sobreposições ficam acima de tudo */
     UI.flushOverlay();
-    Toasts.draw(UI.rect(surface.W - 460 - SPACE.xl, TOPBAR_H + SPACE.md, 460, 400));
+    /* a faixa dos avisos acompanha a largura da tela: com 460 fixos
+       a mensagem saía cortada com reticências justamente quando ela
+       era a única coisa dizendo ao jogador o que fazer */
+    const larguraAviso = Math.min(620, Math.max(380, Math.round(surface.W * 0.36)));
+    Toasts.draw(UI.rect(surface.W - larguraAviso - SPACE.xl, TOPBAR_H + SPACE.md,
+      larguraAviso, 400));
 
     /* O cursor NÃO é desenhado aqui de propósito. Desenhá-lo na
        superfície obrigava um redesenho completo a cada pixel de

@@ -283,9 +283,23 @@ export function draw(r) {
       Game.net.disconnect();
     }
   } else {
-    if (W.button(id + ':conn', b1, 'CONECTAR', { primary: true, font: FONT.buttonBig, disabled: !rv.target })) {
-      const erro = Game.net.connect();
-      if (erro) Bus.emit(EV.UI_TOAST, { text: erro, kind: 'bad' });
+    /* O botão NUNCA fica desabilitado. Um botão desabilitado não
+       recebe clique e portanto não dá resposta nenhuma: o jogador
+       aperta, nada acontece, e não há como descobrir o motivo.
+       Ele fica sempre clicável e explica o que falta. */
+    const semAlvo = !rv.target;
+    if (W.button(id + ':conn', b1,
+      semAlvo ? 'DEFINA UM ALVO' : 'CONECTAR',
+      { primary: !semAlvo, font: FONT.buttonBig })) {
+      if (semAlvo) {
+        Bus.emit(EV.UI_TOAST, {
+          text: 'Escolha um servidor no mapa e use DEFINIR ALVO.',
+          kind: 'warn'
+        });
+      } else {
+        const erro = Game.net.connect();
+        if (erro) Bus.emit(EV.UI_TOAST, { text: erro, kind: 'bad' });
+      }
     }
   }
   const b2 = UI.stackTop(c, METRIC.btnH, 0);

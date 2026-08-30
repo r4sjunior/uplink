@@ -38,6 +38,12 @@ export function addHop(ip) {
   if (S.conn.live) return 'Desconecte antes de alterar a rota.';
   if (!srv(ip)) return 'IP desconhecido.';
   if (S.conn.route.includes(ip)) return 'Este servidor já está na rota.';
+  /* O alvo não pode ser salto de si mesmo. Sem esta recusa era fácil
+     montar uma rota que nunca conecta: o erro só aparecia depois, ao
+     apertar CONECTAR, e num aviso fácil de perder. */
+  if (S.conn.target === ip) {
+    return 'Este servidor é o seu ALVO. Ele não pode ser salto da própria rota.';
+  }
   if (S.conn.route.length >= MAX_HOPS) return 'Rota cheia (máximo de ' + MAX_HOPS + ' saltos).';
   S.conn.route.push(ip);
   Bus.emit(EV.ROUTE_CHANGED, routeView());
@@ -59,6 +65,11 @@ export function clearRoute() {
 export function setTarget(ip) {
   if (S.conn.live) return 'Desconecte primeiro.';
   if (!srv(ip)) return 'IP desconhecido.';
+  /* Se o novo alvo já era um salto, ele sai da rota em vez de deixar
+     o jogador num estado que não conecta. Corrigir em silêncio é
+     melhor do que recusar: a intenção é clara. */
+  const i = S.conn.route.indexOf(ip);
+  if (i >= 0) S.conn.route.splice(i, 1);
   S.conn.target = ip;
   Bus.emit(EV.ROUTE_CHANGED, routeView());
   return null;
