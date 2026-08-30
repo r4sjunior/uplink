@@ -441,6 +441,18 @@ export const CATALOG = {
 
 /* apelidos: nomes que a interface e a simulação tendem a usar */
 export const ALIAS = {
+  /* nomes que o resto do jogo emite e que apontam para o catálogo */
+  connect_ok: 'connect',
+  tool_ok: 'confirm',
+  tool_done: 'confirm',
+  tool_fail: 'error',
+  credit: 'credits',
+  purchase: 'credits',
+  mission_take: 'confirm',
+  ui_click: 'click',
+  ui_select: 'tab',
+  select: 'tab',
+
   button: 'click', press: 'click', beep: 'boot_beep', ok: 'confirm',
   success: 'confirm', fail: 'error', deny: 'error', keypress: 'key',
   space: 'key_space', enter: 'key_enter', backspace: 'key_back',

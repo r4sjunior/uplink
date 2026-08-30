@@ -38,6 +38,7 @@
    a curvas (gráficos, ícones), onde o antialias é desejado.
    ========================================================= */
 
+import { CFG } from '../config.js';
 import { Input } from './surface.js';
 import { Bus, EV } from '../core/bus.js';
 import { C, FONT, SPACE, METRIC, SHADOW, GLOW, RATE, alpha, mix } from './theme.js';
@@ -87,6 +88,7 @@ export const UI = {
   _installed: false,
   _pointerEvents: [],
   _sfxOn: true,
+  _ultimoHover: 0,
 
   /* =======================================================
      INSTALAÇÃO
@@ -99,7 +101,19 @@ export const UI = {
     if (this._installed) return;
     this._installed = true;
 
-    Input.route('move', e => { this._pointerEvents.push(0, e.x, e.y); Dirty.mark(); return false; });
+    /* Movimento do ponteiro é o evento mais frequente do jogo e o
+       mais caro: cada Dirty.mark() redesenha a interface inteira e
+       reenvia a textura para a GPU. O hover precisa responder, mas
+       não a 60 Hz — a 20 Hz ninguém percebe diferença, e o custo cai
+       a um terço. A posição é sempre registrada; só o REDESENHO é
+       que fica em cadência própria. */
+    Input.route('move', e => {
+      this._pointerEvents.push(0, e.x, e.y);
+      const agora = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const passo = 1000 / (CFG.ui.hoverHz || 20);
+      if (agora - this._ultimoHover >= passo) { this._ultimoHover = agora; Dirty.mark(); }
+      return false;
+    });
     Input.route('down', e => { this._pointerEvents.push(1, e.x, e.y); Dirty.mark(); return true; });
     Input.route('up', e => { this._pointerEvents.push(2, e.x, e.y); Dirty.mark(); return true; });
     Input.route('click', e => { this._pointerEvents.push(3, e.x, e.y); Dirty.mark(); return true; });

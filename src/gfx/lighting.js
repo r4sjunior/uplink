@@ -27,8 +27,13 @@ export function buildLighting({ scene, monitor }) {
      Duas fontes: uma área ampla que banha a mesa e o bisel, e um
      ponto próximo que cria o brilho quente no interior do bisel.
      ========================================================= */
-  const screenLight = new THREE.PointLight(0x9fffe0, 0, 2.4, 2.0);
+  /* Holofote, não luz pontual. Uma PointLight com sombra usa mapa
+     CÚBICO: seis renderizações da cena inteira por quadro. Um
+     SpotLight usa um mapa só. A tela emite para a frente de qualquer
+     forma, então o cone é fisicamente mais correto e custa 1/6. */
+  const screenLight = new THREE.SpotLight(0x9fffe0, 0, 2.6, Math.PI * 0.46, 0.9, 1.7);
   screenLight.position.set(0, 0.02, 0.16);
+  screenLight.target.position.set(0, -0.30, 0.85);
   screenLight.castShadow = CFG.gfx.shadows;
   if (screenLight.castShadow) {
     screenLight.shadow.mapSize.set(CFG.gfx.shadowMapSize, CFG.gfx.shadowMapSize);
@@ -37,11 +42,14 @@ export function buildLighting({ scene, monitor }) {
     screenLight.shadow.radius = HI() ? 3 : 1;
     screenLight.shadow.camera.near = 0.02;
     screenLight.shadow.camera.far = 2.6;
+    screenLight.shadow.focus = 1;
   }
   group.add(screenLight);
+  group.add(screenLight.target);
 
   /* derrame largo para frente: o que ilumina o teclado e a mesa */
   const spill = new THREE.SpotLight(0x8fffd8, 0, 3.2, Math.PI * 0.44, 0.85, 1.6);
+  spill.castShadow = false;
   spill.position.set(0, 0.06, 0.10);
   spill.target.position.set(0, -0.42, 0.62);
   spill.castShadow = false;
@@ -109,6 +117,7 @@ export function buildLighting({ scene, monitor }) {
      ========================================================= */
   const CAMADA_TELA = 1;
   screenLight.layers.set(CAMADA_TELA);
+  screenLight.target.layers.set(CAMADA_TELA);
   spill.layers.set(CAMADA_TELA);
   scene.traverse(o => {
     if (!o.isMesh) return;
@@ -154,7 +163,10 @@ export function buildLighting({ scene, monitor }) {
       const kick = acender < 0.35 ? Math.sin(acender * Math.PI / 0.35) * 0.5 : 0;
 
       /* --- amostra da interface --- */
-      if (screen && quadro % (LOW() ? 12 : 6) === 0) {
+      /* a amostragem lê pixels do canvas da interface: cara. A cor
+         média de uma tela de terminal muda devagar, então 1x por
+         segundo já é mais do que suficiente. */
+      if (screen && quadro % 30 === 0) {
         const s = screen.sample();
         if (s) {
           alvo.setRGB(

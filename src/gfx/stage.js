@@ -142,7 +142,9 @@ export const Stage = {
     dom.addEventListener('pointermove', e => {
       const p = paraSurface(e);
       Input.feed(p ? { type: 'move', x: p.x, y: p.y, ev: e } : { type: 'leave' });
-      dom.style.cursor = p ? 'none' : 'default';   /* dentro da tela, o cursor é desenhado pela UI */
+      /* o cursor do sistema fica: desenhar um na superfície custava um
+         redesenho inteiro por movimento (ver shell.js) */
+      dom.style.cursor = p ? 'default' : 'default';
     });
 
     dom.addEventListener('pointerdown', e => {
@@ -188,7 +190,17 @@ export const Stage = {
     const w = Math.max(1, innerWidth);
     const h = Math.max(1, innerHeight);
 
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, CFG.gfx.maxPixelRatio));
+    /* Resolução efetiva: o menor entre a densidade do dispositivo, o
+       teto de densidade e o teto de megapixels. Numa tela grande é o
+       terceiro que manda, e é ele que devolve o jogo à jogabilidade. */
+    const densidade = Math.min(devicePixelRatio || 1, CFG.gfx.maxPixelRatio);
+    const pixels = w * h * densidade * densidade;
+    const corte = pixels > CFG.gfx.maxPixels
+      ? Math.sqrt(CFG.gfx.maxPixels / pixels)
+      : 1;
+    this._densidade = densidade * corte;
+
+    this.renderer.setPixelRatio(this._densidade);
     this.renderer.setSize(w, h, false);
     this.rig.setAspect(w / h);
     if (this.post) this.post.setSize(w, h);

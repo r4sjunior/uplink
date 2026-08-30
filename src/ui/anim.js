@@ -349,6 +349,12 @@ export const Anim = {
   },
 
   /** Descarta o estado contínuo de widgets que sumiram (chamado pelo toolkit). */
+  /** Lê um valor suavizado sem avançá-lo. Devolve 1 se ainda não existe. */
+  peek(key) {
+    const v = this._smooth.get(key);
+    return v === undefined ? 1 : v;
+  },
+
   forget(prefix) {
     for (const k of this._smooth.keys()) if (k.startsWith(prefix)) this._smooth.delete(k);
   },

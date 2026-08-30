@@ -34,17 +34,35 @@ export const CFG = {
   ui: {
     width: 1920,
     height: 1080,
-    /* oversampling do canvas da interface: nitidez do texto na textura */
-    ss: TIER === 'high' ? 2 : (TIER === 'medium' ? 1.5 : 1),
-    /* taxa máxima de redesenho da interface (Hz). O 3D roda livre. */
-    maxRedrawHz: 60
+    /* Oversampling do canvas da interface.
+       Era 2 no tier alto — 3840x2160 — e isso é desperdício puro: a
+       tela do CRT ocupa cerca de 86% da altura do viewport, então a
+       textura já chega MINIFICADA. Oversamplear uma imagem que vai
+       encolher só multiplica o custo de redesenho e de envio para a
+       GPU. Fica em 1, com um empurrão pequeno no tier alto. */
+    ss: TIER === 'high' ? 1.25 : 1,
+    /* Taxa máxima de redesenho da interface (Hz). O 3D roda livre.
+       Redesenhar a interface inteira custa muito mais que renderizar
+       a cena, e 30 Hz é indistinguível em painéis estáticos. */
+    maxRedrawHz: 30,
+    /* Redesenhos disparados só por movimento do ponteiro (hover).
+       Separado do resto: mover o mouse não pode custar 60 quadros. */
+    hoverHz: 20
   },
 
   /* --- renderer --- */
   gfx: {
-    maxPixelRatio: TIER === 'high' ? 2 : 1.5,
+    maxPixelRatio: TIER === 'high' ? 1.75 : 1.25,
+    /* Teto absoluto do buffer de renderização, em megapixels.
+       A cadeia de pós-processamento faz de quatro a seis passagens de
+       tela cheia em meia-precisão. Numa tela 4K isso é dezenas de
+       megapixels por quadro só de preenchimento — é o que trava a
+       máquina, e nenhuma delas depende da resolução para funcionar:
+       a máscara de fósforo e o bloom são efeitos de baixa frequência.
+       Acima do teto, o quadro é renderizado menor e ampliado. */
+    maxPixels: TIER === 'high' ? 2.6e6 : 1.8e6,
     shadows: TIER !== 'low',
-    shadowMapSize: TIER === 'high' ? 2048 : 1024,
+    shadowMapSize: TIER === 'high' ? 1536 : 1024,
     anisotropy: TIER === 'high' ? 16 : 4,
     envMapSize: TIER === 'high' ? 512 : 256,
     /* o monitor curvo: raio da curvatura do vidro (unidades de cena) */
@@ -67,7 +85,10 @@ export const CFG = {
       persistence: 0.13     /* rastro de fósforo */
     },
     grain: { enabled: true, amount: 0.035 },
-    ao: { enabled: TIER !== 'low', intensity: 0.85, radius: 0.28 },
+    /* A oclusão de ambiente custa caro e rende pouco numa cena de
+       uma mesa só, quase toda em sombra. Fica desligada por padrão e
+       pode ser ligada com ?ao=1 por quem quiser comparar. */
+    ao: { enabled: false, intensity: 0.85, radius: 0.28 },
     dof: { enabled: TIER === 'high', focus: 1.0, aperture: 0.0009 },
     taa: TIER === 'high',
     fxaa: TIER !== 'high',
@@ -100,3 +121,54 @@ if (q.has('nopost')) CFG.post.enabled = false;
 if (q.has('raw')) CFG.debug.showSurfaceRaw = true;
 if (q.has('stats')) CFG.debug.stats = true;
 if (q.has('ss')) CFG.ui.ss = Number(q.get('ss'));
+if (q.has('ao')) CFG.post.ao.enabled = q.get('ao') !== '0';
+if (q.has('shadows')) CFG.gfx.shadows = q.get('shadows') !== '0';
+
+/* Preferência de qualidade escolhida pelo jogador, se houver.
+   Vem depois dos parâmetros de URL para o depurador sempre vencer. */
+try {
+  const salvo = typeof localStorage !== 'undefined' && localStorage.getItem('uplink3d.qualidade');
+  if (salvo && !q.has('tier')) aplicaQualidade(salvo);
+} catch (e) { /* armazenamento bloqueado */ }
+
+/**
+ * Perfis de qualidade. Mexem no que realmente pesa, nesta ordem:
+ * resolução da interface, sombras, pós-processamento.
+ */
+export function aplicaQualidade(nivel) {
+  CFG.qualidade = nivel;
+  if (nivel === 'baixa') {
+    CFG.ui.ss = 1;
+    CFG.ui.maxRedrawHz = 20;
+    CFG.ui.hoverHz = 12;
+    CFG.gfx.maxPixelRatio = 1;
+    CFG.gfx.maxPixels = 1.2e6;
+    CFG.gfx.shadows = false;
+    CFG.post.bloom.enabled = true;
+    CFG.post.crt.persistence = 0;
+    CFG.post.grain.enabled = false;
+    CFG.post.dof.enabled = false;
+    CFG.post.ao.enabled = false;
+  } else if (nivel === 'media') {
+    CFG.ui.ss = 1;
+    CFG.ui.maxRedrawHz = 30;
+    CFG.ui.hoverHz = 20;
+    CFG.gfx.maxPixelRatio = 1.25;
+    CFG.gfx.maxPixels = 1.8e6;
+    CFG.gfx.shadows = true;
+    CFG.post.grain.enabled = true;
+    CFG.post.dof.enabled = false;
+    CFG.post.ao.enabled = false;
+  } else if (nivel === 'alta') {
+    CFG.ui.ss = 1.25;
+    CFG.ui.maxRedrawHz = 30;
+    CFG.ui.hoverHz = 20;
+    CFG.gfx.maxPixelRatio = 1.75;
+    CFG.gfx.maxPixels = 3.2e6;
+    CFG.gfx.shadows = true;
+    CFG.post.grain.enabled = true;
+    CFG.post.dof.enabled = true;
+    CFG.post.ao.enabled = true;
+  }
+  return CFG;
+}

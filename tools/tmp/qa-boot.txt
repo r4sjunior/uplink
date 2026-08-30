@@ -1,0 +1,20 @@
+PROBE apos frames: {"screen":"boot","canvas":"1920x1080","amostrasClaras":0}
+PROBE apos frames: {"screen":"boot","canvas":"1920x1080","amostrasClaras":0}
+PROBE apos frames: {"screen":"boot","canvas":"1920x1080","amostrasClaras":12}
+PROBE apos frames: {"screen":"boot","canvas":"1920x1080","amostrasClaras":16}
+PROBE apos frames: {"screen":"boot","canvas":"1920x1080","amostrasClaras":31}
+
+=== qa-boot ===
+stats: {"fps":4,"frameMs":4.8,"drawCalls":1,"triangles":1,"uiRedraws":48,"tier":"low","screen":"boot"}
+PROBLEMAS:
+  [warn] [.WebGL-0x704c023bfe00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x704c023bfe00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost
+  [warn] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently
+  [warn] [.WebGL-0x704c023c3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x704c023c3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x704c023c3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x704c023c3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+
+PNGs:
+  tools\shots\qa-boot-boot-112f.png

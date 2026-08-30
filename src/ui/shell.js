@@ -215,9 +215,11 @@ export const Shell = {
     UI.flushOverlay();
     Toasts.draw(UI.rect(surface.W - 460 - SPACE.xl, TOPBAR_H + SPACE.md, 460, 400));
 
-    /* cursor desenhado: dentro da tela do CRT, o cursor do sistema
-       está escondido, então a interface desenha o próprio */
-    if (UI.inside) this._drawCursor();
+    /* O cursor NÃO é desenhado aqui de propósito. Desenhá-lo na
+       superfície obrigava um redesenho completo a cada pixel de
+       movimento do mouse — a causa principal de travamento. O cursor
+       do sistema fica visível e cai exatamente sobre o elemento que o
+       raycast atinge, porque os dois partem do mesmo ponto. */
 
     /* cortina de transição entre telas */
     if (this._fade < 1) {

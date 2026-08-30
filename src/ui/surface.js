@@ -36,6 +36,26 @@ export class Surface {
     this._version = 0;
   }
 
+  /**
+   * Troca o fator de supersampling em tempo de execução.
+   *
+   * O elemento canvas continua o MESMO — só as dimensões mudam. Isso
+   * importa porque a textura do CRT aponta para este elemento: trocá-lo
+   * exigiria reconstruir o material. Quem chama precisa marcar a
+   * textura como suja e pedir um redesenho.
+   */
+  setSupersample(ss) {
+    const novo = Math.max(0.5, Math.min(2, Number(ss) || 1));
+    if (Math.abs(novo - this.ss) < 0.001) return false;
+    this.ss = novo;
+    this.canvas.width = Math.round(this.W * novo);
+    this.canvas.height = Math.round(this.H * novo);
+    /* redimensionar um canvas apaga o contexto: reaplica o que importa */
+    this.ctx.textBaseline = 'alphabetic';
+    this._dirty = true;
+    return true;
+  }
+
   /** Prepara o contexto para um frame: reseta transform e aplica o SS. */
   begin() {
     const c = this.ctx;

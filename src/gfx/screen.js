@@ -132,8 +132,14 @@ export function buildScreen({ surface, renderer }) {
   const tex = new THREE.CanvasTexture(surface.canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.generateMipmaps = true;                        /* a tela é minificada: sem mip, o texto cintila */
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  /* SEM mipmap. Cada `needsUpdate` reenvia a textura para a GPU, e com
+     mipmap ligado a GPU ainda reconstrói a pirâmide inteira — num
+     canvas do tamanho da interface isso é o item mais caro do quadro,
+     e ele acontece a cada movimento do mouse.
+     A tela ocupa ~86% da altura do viewport, então a minificação é
+     pequena e a anisotropia dá conta do cintilar. */
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
   tex.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), CFG.gfx.anisotropy);
   tex.needsUpdate = true;

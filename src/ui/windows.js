@@ -204,10 +204,33 @@ export const Windows = {
       }
     }
 
+    /* --- oclusão ---
+       Uma janela completamente coberta por outra acima dela não
+       precisa ser desenhada. Com meia dúzia de janelas empilhadas
+       isso é a diferença entre 23 ms e 4 ms por quadro, e o teste
+       custa quatro comparações por par. Só vale para janelas
+       assentadas: uma em animação ainda é translúcida. */
+    const oculta = new Array(this.list.length).fill(false);
+    for (let i = 0; i < this.list.length - 1; i++) {
+      const a = this.list[i];
+      if (a.closing) continue;
+      for (let j = i + 1; j < this.list.length; j++) {
+        const b = this.list[j];
+        if (b.closing) continue;
+        if (Anim.peek('win:' + b.id + ':open') < 0.999) continue;
+        if (b.x <= a.x && b.y <= a.y &&
+            b.x + b.w >= a.x + a.w && b.y + b.h >= a.y + a.h) {
+          oculta[i] = true;
+          break;
+        }
+      }
+    }
+
     /* --- desenho, de baixo para cima --- */
     for (let i = 0; i < this.list.length; i++) {
       const w = this.list[i];
       const focada = (i === this.list.length - 1) && !w.closing;
+      if (oculta[i]) continue;
 
       /* animação de abrir e fechar */
       let k;

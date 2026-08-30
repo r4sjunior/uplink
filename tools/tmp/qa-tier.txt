@@ -1,0 +1,12 @@
+TIER {"tier":"high","stats":{"fps":4,"frameMs":2.6,"simMs":0,"uiDrawMs":0,"texUploadMs":0,"cenaMs":0.65,"drawCalls":1,"triangles":1,"uiRedraws":18,"surface":"1920x1080","tier":"high","qualidade":"auto","screen":"desktop"},"objetos":{"nos":66,"malhas":45},"luzes":["SpotLight","SpotLight","DirectionalLight","HemisphereLight","PointLight","PointLight"],"materiais":["MeshPhysicalMaterial","MeshBasicMaterial","MeshStandardMaterial"]}
+
+=== qa-tier ===
+stats: {"fps":6,"frameMs":6.5,"simMs":0.03,"uiDrawMs":0,"texUploadMs":0,"cenaMs":0.77,"drawCalls":1,"triangles":1,"uiRedraws":20,"surface":"1920x1080","tier":"high","qualidade":"auto","screen":"desktop"}
+PROBLEMAS:
+  [warn] [.WebGL-0x1fac0040e200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x1fac0040e200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x1fac0040e200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  [warn] [.WebGL-0x1fac0040e200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+
+PNGs:
+  tools\shots\qa-tier-desktop.png

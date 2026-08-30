@@ -19,3 +19,49 @@ body { font: 13px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color
 .pl-bar i { display: block; height: 100%; width: 35%; background: #39ff9e; animation: pl 1.15s cubic-bezier(.6,0,.4,1) infinite; }
 @keyframes pl { 0% { transform: translateX(-100%);} 100% { transform: translateX(340%);} }
 .pl-sub { font-size: 11px; letter-spacing: .3em; color: #4d6a5f; text-transform: uppercase; }
+
+/* =========================================================
+   PAINEL DE DIAGNÓSTICO (F1)
+   Camada HTML por cima da cena, fora do canvas da interface: medir
+   o desempenho não pode custar desempenho.
+   ========================================================= */
+#perfhud {
+  position: fixed; top: 12px; left: 12px; z-index: 60;
+  min-width: 232px; padding: 12px 14px 10px;
+  background: rgba(4, 10, 20, .93);
+  border: 1px solid #1c3a63;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.7);
+  font: 11px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: #a8c4de;
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+  user-select: none;
+}
+#perfhud.aberto { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+
+.ph-linha.ph-fps { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.ph-fps b { font-size: 30px; line-height: 1; font-weight: 600; }
+.ph-fps b.bom { color: #4ade80; }
+.ph-fps b.medio { color: #fbbf24; }
+.ph-fps b.ruim { color: #f87171; }
+.ph-fps span { font-size: 10px; letter-spacing: .16em; color: #5d7794; text-transform: uppercase; }
+
+#ph-tab { width: 100%; border-collapse: collapse; }
+#ph-tab td { padding: 1px 0; }
+#ph-tab td:first-child { color: #6f8aa8; white-space: pre; }
+#ph-tab td:last-child { text-align: right; color: #cfe2f5; font-variant-numeric: tabular-nums; }
+
+.ph-sep { height: 1px; background: #17304f; margin: 9px 0 8px; }
+.ph-tit { font-size: 9.5px; letter-spacing: .2em; color: #5d7794; margin-bottom: 6px; }
+.ph-btns { display: flex; gap: 5px; }
+.ph-btns button {
+  flex: 1; padding: 5px 4px; cursor: pointer;
+  background: #0c1c33; border: 1px solid #1c3a63; border-radius: 2px;
+  color: #8fb0cf; font: inherit; font-size: 10px; letter-spacing: .08em;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.ph-btns button:hover { background: #143154; border-color: #2f6499; color: #d6e8f8; }
+.ph-btns button.on { background: #12c8e8; border-color: #12c8e8; color: #04121e; font-weight: 600; }
+.ph-dica { margin-top: 6px; font-size: 10px; color: #5d7794; }
+.ph-rodape { margin-top: 9px; font-size: 9.5px; color: #44607d; }
