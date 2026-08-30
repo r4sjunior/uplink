@@ -40,7 +40,18 @@ export const Windows = {
    */
   open(id, spec) {
     const ja = this.get(id);
-    if (ja) { this.focus(id); return ja; }
+    if (ja) {
+      /* Reabrir uma janela que ainda está fechando precisa CANCELAR o
+         fechamento. Sem isso ela continua desaparecendo enquanto o
+         jogador a usa: o fundo fica translúcido e o que está atrás
+         aparece por dentro dela. */
+      if (ja.closing) {
+        ja.closing = 0;
+        Anim.forget('win:' + id + ':open');
+      }
+      this.focus(id);
+      return ja;
+    }
 
     const w = Math.max(MIN_W, spec.w || 720);
     const h = Math.max(MIN_H, spec.h || 480);

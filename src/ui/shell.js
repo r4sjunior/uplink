@@ -20,6 +20,7 @@ import { Anim, Ease, Dirty, clamp, lerp } from './anim.js';
 import { Windows } from './windows.js';
 import { C, FONT, SPACE, METRIC, GRID, alpha, snapGrid } from './theme.js';
 import { Apps, APP_LIST } from './apps/index.js';
+import * as WorldMap from './worldmap.js';
 
 const TOPBAR_H = 44;
 const DOCK_H = 76;
@@ -87,6 +88,9 @@ export const Shell = {
     /* as fontes precisam estar prontas antes do primeiro desenho,
        senão o primeiro quadro sai com a fonte de fallback */
     await Text.load();
+    /* o contorno do mundo é assíncrono; pedir agora evita o primeiro
+       quadro do mapa aparecer vazio */
+    WorldMap.carrega();
 
     this._boot = new Typewriter({ speed: 190, lineGap: 0.012 });
     BOOT.forEach(([linha, pausa]) => this._boot.push(linha, pausa));
@@ -130,19 +134,42 @@ export const Shell = {
        protótipo. Toda partida abre com o que o agente precisa ver
        primeiro: a correspondência e o quadro de contratos. */
     Bus.on(EV.GAME_START, () => {
-      Anim.delay(0.35, () => {
-        Apps.open('contracts');
-        Apps.open('email');
-        const c = Windows.get('contracts');
-        const e = Windows.get('email');
-        if (c) { c.x = 24; c.y = TOPBAR_H + 20; c.w = 1000; c.h = 620; }
-        if (e) { e.x = 300; e.y = TOPBAR_H + 190; e.w = 1000; e.h = 560; }
-        Windows.focus('contracts');
-      });
+      Anim.delay(0.35, () => this._arranjoInicial());
     });
     Bus.on(EV.GAME_LOAD, () => {
-      Anim.delay(0.35, () => { Apps.open('contracts'); });
+      Anim.delay(0.35, () => this._arranjoInicial());
     });
+  },
+
+  /* A área útil não tem tamanho fixo: a superfície acompanha a janela.
+     O arranjo inicial é calculado em proporção, não em pixels. */
+  _arranjoInicial() {
+    const s = this._surface;
+    const area = {
+      x: 0, y: TOPBAR_H,
+      w: s.W - SIDE_W,
+      h: s.H - TOPBAR_H - DOCK_H
+    };
+    const larg = Math.min(1040, Math.round(area.w * 0.94));
+    const alt = Math.min(660, Math.round(area.h * 0.90));
+
+    Apps.open('contracts');
+    Apps.open('email');
+    const c = Windows.get('contracts');
+    const e = Windows.get('email');
+    if (c) {
+      c.w = larg; c.h = alt;
+      c.x = area.x + Math.round((area.w - larg) / 2);
+      c.y = area.y + Math.round((area.h - alt) / 2) - 8;
+    }
+    if (e) {
+      /* atrás e deslocada: dá para ver que existe sem atrapalhar */
+      e.w = larg; e.h = alt;
+      e.x = c ? c.x + 26 : area.x + 26;
+      e.y = c ? c.y + 26 : area.y + 26;
+    }
+    Windows.focus('contracts');
+    Dirty.mark();
   },
 
   go(name) {
@@ -159,6 +186,7 @@ export const Shell = {
      ========================================================= */
   update(dt) {
     this._t += dt;
+    this._dtAcumulado = (this._dtAcumulado || 0) + dt;
     Anim.update(dt);
     Toasts.update(dt);
 
@@ -196,9 +224,13 @@ export const Shell = {
   /* =========================================================
      DESENHO
      ========================================================= */
-  draw(surface) {
+  draw(surface, dt) {
     const ctx = surface.begin();
-    UI.begin(ctx, Math.max(0.0001, Math.min(0.05, this._dtDraw || 1 / 60)));
+    /* o dt REAL entre desenhos, não um valor fixo: as animações de
+       janela e as suavizações de hover dependem dele para durarem o
+       que foram calibradas para durar */
+    UI.begin(ctx, Math.max(0.0001, Math.min(0.1, dt || this._dtAcumulado || 1 / 30)));
+    this._dtAcumulado = 0;
 
     /* fundo comum */
     ctx.fillStyle = C.surf0;
@@ -612,7 +644,9 @@ export const Shell = {
 
   _miniMapa(r, hud) {
     const ctx = UI.ctx;
-    UI.fillVGrad(r.x, r.y, r.w, r.h, '#071634', '#030a1c');
+    if (!WorldMap.desenha(ctx, r, 'mini')) {
+      UI.fillVGrad(r.x, r.y, r.w, r.h, '#071634', '#030a1c');
+    }
     UI.frameR(r, C.line2, 1);
 
     /* a rota desenhada inclui o alvo como último ponto */
@@ -628,12 +662,16 @@ export const Shell = {
     ctx.beginPath(); ctx.rect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); ctx.clip();
 
     if (world) {
+      const salvos = new Set(Game.state.links);
       const servs = Object.values(world.servers);
       for (let i = 0; i < servs.length; i++) {
         const sv = servs[i];
+        if (!sv.publicList && !salvos.has(sv.ip)) continue;
         const px = r.x + 2 + sv.x * (r.w - 4);
         const py = r.y + 2 + sv.y * (r.h - 4);
-        UI.fill(Math.round(px), Math.round(py), 2, 2, alpha(C.accentBright, 0.32));
+        const meu = salvos.has(sv.ip);
+        UI.fill(Math.round(px), Math.round(py), meu ? 3 : 2, meu ? 3 : 2,
+          alpha(meu ? C.cyanBright : C.accentBright, meu ? 0.85 : 0.32));
       }
     }
 

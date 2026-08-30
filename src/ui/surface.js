@@ -37,6 +37,27 @@ export class Surface {
   }
 
   /**
+   * Redefine o tamanho LÓGICO da superfície.
+   *
+   * No modo plano a interface é desenhada em 1:1 com a janela: nada
+   * de escalar, nada de tarja preta, e o texto cai exatamente sobre
+   * os pixels do monitor. Quem chama precisa avisar o toolkit e o
+   * medidor de texto, que guardam o fator de supersampling.
+   */
+  setSize(w, h, ss) {
+    const nw = Math.max(320, Math.round(w));
+    const nh = Math.max(240, Math.round(h));
+    const ns = ss === undefined ? this.ss : Math.max(0.5, Math.min(2, ss));
+    if (nw === this.W && nh === this.H && Math.abs(ns - this.ss) < 0.001) return false;
+    this.W = nw; this.H = nh; this.ss = ns;
+    this.canvas.width = Math.round(nw * ns);
+    this.canvas.height = Math.round(nh * ns);
+    this.ctx.textBaseline = 'alphabetic';
+    this._dirty = true;
+    return true;
+  }
+
+  /**
    * Troca o fator de supersampling em tempo de execução.
    *
    * O elemento canvas continua o MESMO — só as dimensões mudam. Isso

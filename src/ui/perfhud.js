@@ -33,6 +33,14 @@ export const PerfHUD = {
         `<button data-q="${id}">${rot}</button>`).join('')}</div>
       <div class="ph-dica" id="ph-dica"></div>
       <div class="ph-sep"></div>
+      <div class="ph-tit">APRESENTAÇÃO</div>
+      <div class="ph-btns">
+        <button data-modo="plano">PLANO</button>
+        <button data-modo="plano-crt">PLANO + CRT</button>
+        <button data-modo="crt">TUBO 3D</button>
+      </div>
+      <div class="ph-dica" id="ph-dica-modo"></div>
+      <div class="ph-sep"></div>
       <div class="ph-tit">SOM</div>
       <div class="ph-btns"><button data-som="toggle">MUDO</button></div>
       <div class="ph-rodape">F1 fecha este painel</div>`;
@@ -47,6 +55,21 @@ export const PerfHUD = {
         this._marcaAtivo();
         this._aplica();
       }
+      const m = e.target.getAttribute && e.target.getAttribute('data-modo');
+      if (m) {
+        const leve = m === 'plano-crt';
+        const alvo = m === 'crt' ? 'crt' : 'plano';
+        document.body.classList.toggle('crt-leve', leve);
+        try {
+          localStorage.setItem('uplink3d.modo', alvo);
+          localStorage.setItem('uplink3d.crtleve', leve ? '1' : '0');
+        } catch (err) {}
+        this._marcaModo();
+        /* trocar para o tubo 3D exige recarregar: o three.js e a
+           cadeia de pós-processamento nem foram baixados no modo plano */
+        if (alvo !== CFG.render.modo) location.reload();
+      }
+
       if (e.target.getAttribute && e.target.getAttribute('data-som')) {
         const A = window.__UPLINK && window.__UPLINK.Audio;
         if (A && A.toggleMute) {
@@ -62,7 +85,24 @@ export const PerfHUD = {
     });
 
     this._marcaAtivo();
+    this._marcaModo();
     this.mostra(false);
+  },
+
+  _marcaModo() {
+    if (!this.el) return;
+    let leve = false;
+    try { leve = localStorage.getItem('uplink3d.crtleve') === '1'; } catch (e) {}
+    const atual = CFG.render.modo === 'crt' ? 'crt' : (leve ? 'plano-crt' : 'plano');
+    this.el.querySelectorAll('[data-modo]').forEach(b => {
+      b.classList.toggle('on', b.getAttribute('data-modo') === atual);
+    });
+    const d = this.el.querySelector('#ph-dica-modo');
+    d.textContent = atual === 'crt'
+      ? 'monitor 3D com pós-processamento — o mais caro'
+      : atual === 'plano-crt'
+        ? 'linhas de varredura e vinheta por CSS, sem custo por quadro'
+        : 'interface direta, sem WebGL — o mais rápido';
   },
 
   /* Propaga a mudança de perfil para quem guarda estado derivado:

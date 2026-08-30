@@ -6,13 +6,20 @@
 import { CFG } from './config.js';
 import { Bus, EV } from './core/bus.js';
 import { Surface } from './ui/surface.js';
-import { Stage } from './gfx/stage.js';
 import { Shell } from './ui/shell.js';
 import { Game } from './core/game.js';
 import { Audio } from './audio/engine.js';
 import { PerfHUD } from './ui/perfhud.js';
 
 const surface = new Surface(CFG.ui.width, CFG.ui.height, CFG.ui.ss);
+
+/* A apresentação é escolhida em tempo de carga, e as duas cumprem o
+   mesmo contrato. Carregar sob demanda importa: no modo plano o
+   three.js e toda a cadeia de pós-processamento nem chegam a ser
+   baixados nem interpretados. */
+const Stage = (await (CFG.render.modo === 'crt'
+  ? import('./gfx/stage.js')
+  : import('./gfx/flat.js'))).Stage;
 
 /* --------- métricas expostas ao harness de QA ---------
    Separadas por etapa porque as três têm custos muito diferentes e
@@ -67,9 +74,10 @@ function frame(now) {
   redrawAcc += dt;
   const passo = 1 / CFG.ui.maxRedrawHz;
   if (surface.dirty && redrawAcc >= passo) {
+    const desdeUltimo = redrawAcc;
     redrawAcc = 0;
     t = performance.now();
-    Shell.draw(surface);
+    Shell.draw(surface, desdeUltimo);
     perf._uiAcc += performance.now() - t;
     t = performance.now();
     Stage.markSurfaceUpdated();
@@ -107,6 +115,13 @@ function frame(now) {
 async function main() {
   const host = document.getElementById('stage');
 
+  /* o sabor de CRT por CSS é uma preferência à parte do modo */
+  try {
+    if (localStorage.getItem('uplink3d.crtleve') === '1') {
+      document.body.classList.add('crt-leve');
+    }
+  } catch (e) { /* armazenamento bloqueado */ }
+
   await Game.init();                       /* mundo, save, dados */
   await Stage.init({ surface, host });     /* renderer, cena, monitor */
   await Shell.init({ surface });           /* interface */
@@ -117,7 +132,7 @@ async function main() {
   Stage.resize();
 
   /* primeiro desenho garantido */
-  Shell.draw(surface);
+  Shell.draw(surface, 1 / 60);
   Stage.markSurfaceUpdated();
 
   requestAnimationFrame(frame);

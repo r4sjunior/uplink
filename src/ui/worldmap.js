@@ -59,9 +59,9 @@ function rasteriza(w, h, estilo) {
 
   /* --- oceano --- */
   const oceano = ctx.createLinearGradient(0, 0, 0, c.height);
-  oceano.addColorStop(0, '#04101f');
-  oceano.addColorStop(0.55, '#061a33');
-  oceano.addColorStop(1, '#030b18');
+  oceano.addColorStop(0, '#030b17');
+  oceano.addColorStop(0.55, '#04122a');
+  oceano.addColorStop(1, '#020712');
   ctx.fillStyle = oceano;
   ctx.fillRect(0, 0, c.width, c.height);
 
@@ -80,10 +80,13 @@ function rasteriza(w, h, estilo) {
   ctx.stroke();
 
   /* --- terra --- */
+  /* A terra é FUNDO, não conteúdo. No original ela é escura e os nós
+     saltam por cima; um mapa claro demais compete com os dados e faz
+     os servidores sumirem. */
   const terra = ctx.createLinearGradient(0, 0, 0, c.height);
-  terra.addColorStop(0, '#2b6ec4');
-  terra.addColorStop(0.45, '#2159a6');
-  terra.addColorStop(1, '#17407c');
+  terra.addColorStop(0, '#173c79');
+  terra.addColorStop(0.45, '#12305f');
+  terra.addColorStop(1, '#0c2247');
 
   ctx.save();
   /* sombra suave sob a massa de terra: dá relevo sem custar nada */
@@ -106,7 +109,7 @@ function rasteriza(w, h, estilo) {
   ctx.restore();
 
   /* --- litoral --- */
-  ctx.strokeStyle = alpha('#7fb8ff', grande ? 0.55 : 0.38);
+  ctx.strokeStyle = alpha('#5f9ae6', grande ? 0.45 : 0.30);
   ctx.lineWidth = grande ? 1 : 0.6;
   ctx.lineJoin = 'round';
   ctx.beginPath();

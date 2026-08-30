@@ -119,6 +119,16 @@ export const UI = {
     Input.route('click', e => { this._pointerEvents.push(3, e.x, e.y); Dirty.mark(); return true; });
     Input.route('wheel', e => { this._pointerEvents.push(4, e.x, e.y, e.dy); Dirty.mark(); return true; });
     Input.route('leave', () => { this._pointerEvents.push(5, -1e5, -1e5); Dirty.mark(); return false; });
+    /* a superfície pode mudar de tamanho a qualquer momento (janela
+       redimensionada, troca de perfil de qualidade); o toolkit guarda
+       as dimensões e o fator de supersampling, então precisa saber */
+    Bus.on(EV.UI_RESIZE, () => {
+      this.W = surface.W; this.H = surface.H; this.ss = surface.ss;
+      Text.setSupersample(surface.ss);
+      this._clip = [0, 0, surface.W, surface.H];
+      Dirty.mark();
+    });
+
     Input.route('key', e => {
       const ev = e.ev;
       this._keyQueue.push({

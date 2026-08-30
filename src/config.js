@@ -30,6 +30,16 @@ export const TIER = detectTier();
 export const CFG = {
   tier: TIER,
 
+  /* Como a interface chega à tela.
+       'plano' — o canvas entra direto no documento. Sem WebGL, sem
+                 envio de textura, sem passagem de pós-processamento.
+                 O texto fica em 1:1 com os pixels do monitor.
+       'crt'   — a interface vira textura de um monitor modelado em
+                 3D, com bloom, máscara de fósforo e reflexo de vidro.
+                 Bonito e caro.
+     O padrão é 'plano': jogar vem antes de impressionar. */
+  render: { modo: 'plano' },
+
   /* --- superfície da interface --- */
   ui: {
     width: 1920,
@@ -123,6 +133,13 @@ if (q.has('stats')) CFG.debug.stats = true;
 if (q.has('ss')) CFG.ui.ss = Number(q.get('ss'));
 if (q.has('ao')) CFG.post.ao.enabled = q.get('ao') !== '0';
 if (q.has('shadows')) CFG.gfx.shadows = q.get('shadows') !== '0';
+if (q.has('crt')) CFG.render.modo = q.get('crt') === '0' ? 'plano' : 'crt';
+if (q.has('modo')) CFG.render.modo = q.get('modo');
+
+try {
+  const m = typeof localStorage !== 'undefined' && localStorage.getItem('uplink3d.modo');
+  if (m && !q.has('crt') && !q.has('modo')) CFG.render.modo = m;
+} catch (e) { /* armazenamento bloqueado */ }
 
 /* Preferência de qualidade escolhida pelo jogador, se houver.
    Vem depois dos parâmetros de URL para o depurador sempre vencer. */

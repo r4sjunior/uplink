@@ -92,6 +92,7 @@ export const EV = {
   UI_FOCUS:       'ui:focus',
   UI_TOAST:       'ui:toast',         /* {text, kind} */
   UI_SCREEN:      'ui:screen',        /* {name} boot|login|desktop|over */
+  UI_RESIZE:      'ui:resize',        /* {w, h, ss} a superfície mudou de tamanho */
 
   /* câmera / cinema */
   CAM_MOVE:       'cam:move',         /* {preset, duration} */

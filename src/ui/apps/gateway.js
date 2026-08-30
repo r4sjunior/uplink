@@ -121,30 +121,40 @@ function equipamento(r, st) {
     const possui = !!it.owned;
     const podeComprar = it.affordable && (it.canFit !== false) && !possui;
 
-    Text.drawFit(UI.ctx, it.name, rr.x + SPACE.sm, rr.y + 20, rr.w - 210, FONT.label,
+    Text.drawFit(UI.ctx, it.name, rr.x + SPACE.sm, rr.y + 20, rr.w - 260, FONT.label,
       possui ? C.ok : (podeComprar ? C.text : C.textFaint));
 
+    /* Colunas com largura declarada. A ficha técnica e a descrição
+       ocupavam a mesma faixa e se sobrepunham: agora cada uma tem a
+       sua, e a descrição é cortada com reticências no limite. */
+    const COL_FICHA = 190;
+    const COL_BOTAO = 108;
+    const xFicha = rr.x + SPACE.sm;
+    const xDesc = xFicha + COL_FICHA;
+    const larguraDesc = rr.w - COL_FICHA - COL_BOTAO - 130 - SPACE.sm;
+
     const detalhe = it.cpuSlots !== undefined
-      ? it.cpuSlots + ' slots de CPU  ·  ' + it.memSlots + ' de memória'
+      ? it.cpuSlots + ' CPU  ·  ' + it.memSlots + ' MEM'
       : it.speed !== undefined ? (it.speed + (st.sub === 1 ? ' GHz' : ' Gq/s'))
       : it.size + ' Gq';
-    Text.draw(UI.ctx, detalhe, rr.x + SPACE.sm, rr.y + 37, FONT.dataSmall, C.textFaint);
+    Text.drawFit(UI.ctx, detalhe, xFicha, rr.y + 37, COL_FICHA - SPACE.sm,
+      FONT.dataSmall, C.textFaint);
 
-    if (it.desc) {
-      Text.drawFit(UI.ctx, it.desc, rr.x + 250, rr.y + 37, rr.w - 360, FONT.dataSmall, C.textFaint);
+    if (it.desc && larguraDesc > 60) {
+      Text.drawFit(UI.ctx, it.desc, xDesc, rr.y + 37, larguraDesc, FONT.dataSmall, C.textFaint);
     }
 
     Text.draw(UI.ctx, possui ? 'INSTALADO' : F.credits(it.price),
-      rr.x + rr.w - 100, rr.y + 20, FONT.dataStrong,
+      rr.x + rr.w - COL_BOTAO - SPACE.sm, rr.y + 20, FONT.dataStrong,
       possui ? C.ok : (it.affordable ? C.okBright : C.dangerDim), 'right');
 
     if (it.tooBig) {
-      Text.draw(UI.ctx, 'não cabe neste chassi', rr.x + rr.w - 100, rr.y + 37,
+      Text.draw(UI.ctx, 'não cabe neste chassi', rr.x + rr.w - COL_BOTAO - SPACE.sm, rr.y + 37,
         FONT.dataSmall, C.warnDim, 'right');
     }
 
     if (!possui) {
-      const b = UI.rect(rr.x + rr.w - 88, rr.y + 13, 80, 26);
+      const b = UI.rect(rr.x + rr.w - COL_BOTAO, rr.y + 13, COL_BOTAO - SPACE.xs, 26);
       if (W.button(id + ':buy' + st.sub + i, b, 'COMPRAR',
         { primary: podeComprar, disabled: !podeComprar })) {
         aviso(compradores[st.sub](it.id), 'Instalado.');
