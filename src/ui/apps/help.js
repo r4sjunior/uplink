@@ -114,7 +114,7 @@ const CAPITULOS = [
 ];
 
 export function draw(r) {
-  const st = UI.state(id, () => ({ sel: 0, scroll: 0 }));
+  const st = UI.state(id, () => ({ sel: 0, scroll: 0, texto: { scroll: 0 } }));
 
   const indiceR = UI.cutLeft(r, 250);
   UI.cutLeft(r, SPACE.sm);
@@ -133,7 +133,7 @@ export function draw(r) {
       sel ? C.cyanBright : C.textFaint);
     Text.drawFit(UI.ctx, CAPITULOS[i].titulo, rr.x + 32, rr.y + 24, rr.w - 44,
       FONT.label, sel ? C.textStrong : C.text);
-  }, { rowH: 38, state: st, stripes: false });
+  }, { rowH: 38, state: st, stripes: false, onSelect: () => { st.texto.scroll = 0; } });
 
   /* texto */
   UI.fillVGrad(textoR.x, textoR.y, textoR.w, textoR.h, C.panelTop, C.panelBottom);
@@ -146,19 +146,18 @@ export function draw(r) {
   Text.drawIn(UI.ctx, cap.titulo, tit.x, tit.y, tit.h, FONT.screenTitle, C.cyanBright, 'left');
   W.separator(UI.stackTop(c, 10, SPACE.md), C.line2);
 
-  UI.pushClip(c.x, c.y, c.w, c.h);
-  let y = c.y;
-  cap.corpo.forEach(linha => {
-    if (!linha) { y += 12; return; }
-    /* uma linha que começa com uma palavra em maiúsculas seguida de travessão
-       é um verbete: destaca o termo */
+  /* O capítulo rola: alguns passam de uma tela e o corte no clipe
+     escondia a metade final sem avisar. */
+  const blocos = cap.corpo.map(linha => {
+    if (!linha) return { t: '', gap: 8 };
     const verbete = /^[A-ZÇÃÉÍÓÚ_]{3,}\s—/.test(linha);
-    Text.wrap(UI.ctx, linha, verbete ? FONT.bodySmall : FONT.body, c.w).forEach((q, k) => {
-      Text.draw(UI.ctx, q, c.x, y + 15, verbete ? FONT.bodySmall : FONT.body,
-        verbete && k === 0 ? C.warnBright : (/^\d\./.test(linha) ? C.text : C.textDim));
-      y += verbete ? 19 : 22;
-    });
-    y += 4;
+    const numerado = /^\d+\./.test(linha.trim());
+    return {
+      t: linha,
+      font: verbete ? FONT.bodySmall : FONT.body,
+      color: verbete ? C.warnBright : (numerado ? C.text : C.textDim),
+      gap: 6
+    };
   });
-  UI.popClip();
+  W.textBlock(id + ':texto:' + st.sel, c, blocos, { state: st.texto });
 }

@@ -982,6 +982,119 @@ export const W = {
   },
 
   /* =======================================================
+     BLOCO DE TEXTO ROLÁVEL
+     ======================================================= */
+  /**
+   * Texto longo dentro de uma caixa, com rolagem por roda e barra.
+   *
+   * Existe porque desenhar texto com `pushClip` e um `y +=` corta o
+   * que não cabe e não oferece jeito de ver o resto — foi o que
+   * acontecia com o corpo do e-mail, o briefing do contrato, o
+   * capítulo do manual e a matéria do noticiário.
+   *
+   * @param {Array<string|{t:string,font?:object,color?:string,gap?:number,lead?:number}>} blocos
+   * @param {object} [o] {pad, state, fade}
+   * @returns {{scroll:number, altura:number}}
+   */
+  textBlock(id, r, blocos, o) {
+    o = o || {};
+    const st = o.state || UI.state(id, () => ({ scroll: 0 }));
+    /* o bloco não sonda nada (não é clicável), mas o QA precisa saber
+       onde ele está para poder mirar a roda do mouse */
+    if (UI._qa) UI._qaRects.set(id, [r.x, r.y, r.w, r.h]);
+    if (st.scroll === undefined) st.scroll = 0;
+    const padX = o.pad === undefined ? 0 : o.pad;
+
+    /* --- quebra de linha, memorizada ---
+       Reprocessar a quebra a cada quadro custaria uma medição de
+       texto por palavra. A chave do cache é a largura mais uma
+       assinatura barata do conteúdo. */
+    let assinatura = '' + Math.round(r.w) + '|' + blocos.length;
+    for (let i = 0; i < blocos.length; i++) {
+      const b = blocos[i];
+      const t = typeof b === 'string' ? b : (b.t || '');
+      assinatura += '|' + t.length + (t.length > 8 ? t.charCodeAt(0) + '' + t.charCodeAt(t.length - 1) : t);
+    }
+
+    const cache = UI.state(id + '#wrap', () => ({ chave: null, linhas: null, altura: 0 }));
+    if (cache.chave !== assinatura) {
+      const larg = r.w - padX * 2 - METRIC.scrollW - SPACE.xs;
+      const out = [];
+      let y = 0;
+      for (const b of blocos) {
+        const txt = typeof b === 'string' ? b : (b.t || '');
+        const font = (typeof b === 'object' && b.font) || FONT.body;
+        const cor = (typeof b === 'object' && b.color) || C.text;
+        const lead = (typeof b === 'object' && b.lead) || Math.round(font.size * 1.45);
+        const gap = (typeof b === 'object' && b.gap !== undefined) ? b.gap : 0;
+        const recuo = (typeof b === 'object' && b.recuo) || 0;
+
+        if (!txt) { y += lead * 0.5 + gap; continue; }
+        const partes = Text.wrap(UI.ctx, txt, font, larg - recuo);
+        for (const q of partes) {
+          out.push({ t: q, font, cor, y, recuo });
+          y += lead;
+        }
+        y += gap;
+      }
+      cache.chave = assinatura;
+      cache.linhas = out;
+      cache.altura = y;
+    }
+
+    const linhas = cache.linhas;
+    const alturaTotal = cache.altura;
+    const precisaBarra = alturaTotal > r.h;
+    const larguraBarra = precisaBarra ? METRIC.scrollW : 0;
+    const vista = UI.rect(r.x, r.y, r.w - larguraBarra, r.h);
+
+    /* --- roda --- */
+    if (precisaBarra && UI.inside_(r.x, r.y, r.w, r.h) && UI.wheel !== 0 && UI.inClip(UI.mx, UI.my)) {
+      st.scroll = clamp(st.scroll + UI.wheel * 0.6, 0, alturaTotal - r.h);
+      Dirty.mark();
+    }
+    st.scroll = clamp(st.scroll, 0, Math.max(0, alturaTotal - r.h));
+
+    /* --- desenho: só as linhas visíveis --- */
+    UI.pushClip(vista.x, vista.y, vista.w, vista.h);
+    const topo = st.scroll;
+    const base = st.scroll + vista.h;
+    for (let i = 0; i < linhas.length; i++) {
+      const l = linhas[i];
+      if (l.y + 24 < topo) continue;
+      if (l.y > base) break;
+      Text.draw(UI.ctx, l.t, vista.x + padX + l.recuo,
+        Math.round(vista.y + l.y - topo + l.font.size), l.font, l.cor);
+    }
+    UI.popClip();
+
+    /* --- pistas de que há mais texto ---
+       Sem elas o corte parece fim de conteúdo, e o jogador não
+       procura a rolagem que existe. */
+    if (o.fade !== false && precisaBarra) {
+      if (topo > 2) {
+        const g = UI.vGrad(vista.y, vista.y + 18, alpha(C.panelBottom, 0.95), alpha(C.panelBottom, 0));
+        UI.ctx.fillStyle = g;
+        UI.ctx.fillRect(vista.x, vista.y, vista.w, 18);
+      }
+      if (base < alturaTotal - 2) {
+        const g = UI.vGrad(vista.y + vista.h - 22, vista.y + vista.h,
+          alpha(C.panelBottom, 0), alpha(C.panelBottom, 0.95));
+        UI.ctx.fillStyle = g;
+        UI.ctx.fillRect(vista.x, vista.y + vista.h - 22, vista.w, 22);
+      }
+    }
+
+    if (precisaBarra) {
+      st.scroll = W.scrollbarV(id + '#sb',
+        UI.rect(r.x + r.w - larguraBarra, r.y, larguraBarra, r.h),
+        alturaTotal, r.h, st.scroll);
+    }
+
+    return { scroll: st.scroll, altura: alturaTotal };
+  },
+
+  /* =======================================================
      TERMINAL COM SCROLLBACK
      ======================================================= */
   /**

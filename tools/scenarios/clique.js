@@ -157,6 +157,80 @@ export default async function (page, ctx) {
   });
   ok('roda do mouse rolou a lista', rolDepois > rolAntes, rolAntes + ' -> ' + rolDepois);
 
+  /* --- 9. rolagem dos textos longos --- */
+  async function testaTexto(nomeApp, campo, idBloco, rotulo) {
+    await page.evaluate(async (a) => {
+      const m = await import('/src/ui/windows.js');
+      m.Windows.closeAll();
+      const ap = await import('/src/ui/apps/index.js');
+      ap.Apps.open(a);
+      const w = m.Windows.get(a);
+      const s = window.__UPLINK.surface;
+      /* altura realista, mas menor que o texto: força o transbordo
+         sem espremer o cabeçalho da tela a ponto de não sobrar área */
+      if (w) { w.x = 20; w.y = 60; w.w = s.W - 380; w.h = 430; }
+      /* no e-mail, escolhe a mensagem longa de boas-vindas */
+      if (a === 'email') {
+        const t = await import('/src/ui/toolkit.js');
+        const msgs = window.__UPLINK.Game.state.email;
+        const i = msgs.findIndex(x => x.body && x.body.length > 400);
+        if (i >= 0) { t.UI.state('email').sel = i; t.UI.state('email').corpo.scroll = 0; }
+      }
+    }, nomeApp);
+    await quadros(page, 8);
+
+    /* mira no CENTRO do próprio bloco de texto, achado pelo prefixo
+       do identificador — nada de posição relativa à janela */
+    const alvo = await page.evaluate(async (pref) => {
+      const t = await import('/src/ui/toolkit.js');
+      for (const k of t.UI.qaIds()) {
+        if (k.startsWith(pref)) {
+          const r = t.UI.rectOf(k);
+          if (r && r[3] > 20) {
+            return { x: Math.round(r[0] + r[2] * 0.4), y: Math.round(r[1] + r[3] / 2), h: r[3] };
+          }
+        }
+      }
+      return null;
+    }, idBloco);
+    if (!alvo) { ok(rotulo, false, 'bloco de texto não localizado'); return; }
+    await page.mouse.move(alvo.x, alvo.y);
+    await quadros(page, 2);
+    const diag = await page.evaluate(async ([a, pref]) => {
+      const t = await import('/src/ui/toolkit.js');
+      let alt = null, h = null;
+      for (const [k, v] of t.UI._state) {
+        if (k.startsWith(pref) && k.endsWith('#wrap')) alt = v.altura;
+      }
+      return { altura: alt };
+    }, [nomeApp, idBloco]);
+    const antesR = await page.evaluate(([a, c]) => window.__UPLINK.__rolagem(a, c), [nomeApp, campo]);
+    await page.mouse.wheel({ deltaY: 600 });
+    await quadros(page, 5);
+    const depoisR = await page.evaluate(([a, c]) => window.__UPLINK.__rolagem(a, c), [nomeApp, campo]);
+    /* se o texto cabe na caixa, não haver rolagem é o certo */
+    const transborda = diag.altura > alvo.h + 2;
+    ok(rotulo, transborda ? depoisR > antesR : depoisR === 0,
+      transborda
+        ? antesR + ' -> ' + depoisR + '  (texto ' + diag.altura + ' > caixa ' + alvo.h + ')'
+        : 'o texto cabe na caixa (' + diag.altura + ' <= ' + alvo.h + '), nada a rolar');
+  }
+
+  /* A rolagem do bloco de texto vive no estado do APLICATIVO (foi
+     passada como `state`), não numa entrada própria do widget. */
+  await page.evaluate(async () => {
+    const t = await import('/src/ui/toolkit.js');
+    window.__UPLINK.__rolagem = (app, campo) => {
+      const st = t.UI.state(app);
+      return st && st[campo] ? st[campo].scroll : null;
+    };
+  });
+
+  await testaTexto('help', 'texto', 'help:texto:', 'manual rola o capítulo');
+  await testaTexto('email', 'corpo', 'email:corpo:', 'e-mail rola a mensagem');
+  await testaTexto('news', 'materia', 'news:materia:', 'notícias rola a matéria');
+  await testaTexto('contracts', 'brief', 'contracts:brief:', 'contratos rola o briefing');
+
   await ctx.shot('02-final');
   console.log('\n===== INTERACAO =====');
   res.forEach(r => console.log(r));

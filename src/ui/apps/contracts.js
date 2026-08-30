@@ -31,7 +31,7 @@ function corDificuldade(d) {
 }
 
 export function draw(r) {
-  const st = UI.state(id, () => ({ aba: 0, sel: 0, scroll: 0, scrollBrief: 0 }));
+  const st = UI.state(id, () => ({ aba: 0, sel: 0, scroll: 0, brief: { scroll: 0 } }));
   const quadro = Game.missions.boardView();
 
   /* ---- abas ---- */
@@ -42,7 +42,7 @@ export function draw(r) {
     ABAS[2] + '  ' + quadro.done.length
   ];
   const novaAba = W.tabs(id + ':abas', abaR, rotulos, st.aba);
-  if (novaAba !== st.aba) { st.aba = novaAba; st.sel = 0; Dirty.mark(); }
+  if (novaAba !== st.aba) { st.aba = novaAba; st.sel = 0; st.brief.scroll = 0; Dirty.mark(); }
 
   const lista = st.aba === 0 ? quadro.available : st.aba === 1 ? quadro.active : quadro.done;
 
@@ -147,7 +147,7 @@ export function draw(r) {
     if (W.button(id + ':aceitar', b1, 'ACEITAR', { primary: true, disabled: cheio })) {
       const erro = Game.missions.accept(m.id);
       if (erro) Bus.emit(EV.UI_TOAST, { text: erro, kind: 'bad' });
-      else { st.sel = 0; Dirty.mark(); }
+      else { st.sel = 0; st.brief.scroll = 0; Dirty.mark(); }
     }
     if (W.button(id + ':rota1', b2, 'DEFINIR COMO ALVO')) {
       Game.net.setTarget(m.targetIp);
@@ -172,28 +172,20 @@ export function draw(r) {
     }
   }
 
-  /* briefing e passos, com rolagem */
-  UI.pushClip(c.x, c.y, c.w, c.h);
-  let y = c.y + 6;
-
-  Text.draw(UI.ctx, 'BRIEFING', c.x, y + 12, FONT.labelSmall, C.warnBright);
-  y += 26;
-  Text.wrap(UI.ctx, m.brief.replace(/\*\*/g, ''), FONT.body, c.w).forEach(q => {
-    Text.draw(UI.ctx, q, c.x, y + 14, FONT.body, C.text);
-    y += 21;
+  /* Briefing e passos num bloco rolável. Antes o texto era cortado
+     no clipe da janela e os últimos passos — justamente os que falam
+     de apagar o log — ficavam invisíveis. */
+  const blocos = [
+    { t: 'BRIEFING', font: FONT.labelSmall, color: C.warnBright, gap: 8 }
+  ];
+  m.brief.split('**').join('').split(String.fromCharCode(10)).forEach(linha => {
+    blocos.push({ t: linha, font: FONT.body, color: C.text });
   });
-
-  y += SPACE.md;
-  Text.draw(UI.ctx, 'COMO FAZER', c.x, y + 12, FONT.labelSmall, C.cyanBright);
-  y += 26;
+  blocos.push({ t: '', gap: 14 });
+  blocos.push({ t: 'COMO FAZER', font: FONT.labelSmall, color: C.cyanBright, gap: 8 });
   m.steps.forEach((passo, i) => {
-    const num = String(i + 1) + '.';
-    Text.draw(UI.ctx, num, c.x + 2, y + 14, FONT.dataStrong, C.cyan);
-    Text.wrap(UI.ctx, passo, FONT.bodySmall, c.w - 26).forEach((q, k) => {
-      Text.draw(UI.ctx, q, c.x + 26, y + 14, FONT.bodySmall, C.textDim);
-      y += 19;
-    });
-    y += 6;
+    blocos.push({ t: (i + 1) + '.  ' + passo, font: FONT.bodySmall, color: C.textDim, gap: 7 });
   });
-  UI.popClip();
+
+  W.textBlock(id + ':brief:' + m.id, c, blocos, { state: st.brief });
 }

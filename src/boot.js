@@ -116,6 +116,37 @@ function frame(now) {
   if (info) { perf.calls = info.render.calls; perf.tris = info.render.triangles; }
 }
 
+/* =========================================================
+   DESENHO IMEDIATO
+   Entrada que o dedo sente — tecla e clique — não pode esperar o
+   próximo quadro de animação. Medido: o desenho custa cerca de 1 ms,
+   mas a espera pelo rAF levava a latência a 87 ms na média e 153 ms
+   no pior caso. Desenhar direto no manipulador do evento derruba
+   isso para o custo do desenho.
+
+   A guarda de intervalo existe para uma rajada de teclas (colar,
+   repetição automática) não virar um desenho por caractere.
+   ========================================================= */
+let ultimoUrgente = 0;
+let ultimoDesenho = performance.now();
+const INTERVALO_URGENTE = 8;      /* ms */
+
+function desenhaAgora() {
+  if (!Shell.currentScreen) return;
+  const agora = performance.now();
+  if (agora - ultimoUrgente < INTERVALO_URGENTE) return;
+  if (!surface.dirty) return;
+  ultimoUrgente = agora;
+
+  const t = performance.now();
+  Shell.draw(surface, Math.min(0.05, (agora - ultimoDesenho) / 1000) || 1 / 60);
+  ultimoDesenho = agora;
+  perf._uiAcc += performance.now() - t;
+  perf.redraws++;
+  Stage.markSurfaceUpdated();
+  redrawAcc = 0;
+}
+
 /* --------- arranque --------- */
 async function main() {
   const host = document.getElementById('stage');
@@ -132,6 +163,7 @@ async function main() {
   if (new URLSearchParams(location.search).has('qa')) UI.enableQA();
   await Shell.init({ surface });           /* interface */
   await Audio.init();                      /* som */
+  UI.onUrgent = desenhaAgora;              /* tecla e clique desenham na hora */
   PerfHUD.init();                          /* diagnóstico e qualidade (F1) */
 
   window.addEventListener('resize', () => Stage.resize());

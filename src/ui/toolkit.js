@@ -91,6 +91,10 @@ export const UI = {
   _ultimoHover: 0,
   _qa: false,
   _qaRects: new Map(),
+  /* chamado quando chega entrada que o dedo sente na hora (tecla,
+     clique). O laço principal o usa para desenhar SEM esperar o
+     próximo quadro de animação — ver boot.js. */
+  onUrgent: null,
 
   /* =======================================================
      INSTALAÇÃO
@@ -116,8 +120,18 @@ export const UI = {
       if (agora - this._ultimoHover >= passo) { this._ultimoHover = agora; Dirty.mark(); }
       return false;
     });
-    Input.route('down', e => { this._pointerEvents.push(1, e.x, e.y); Dirty.mark(); return true; });
-    Input.route('up', e => { this._pointerEvents.push(2, e.x, e.y); Dirty.mark(); return true; });
+    Input.route('down', e => {
+      this._pointerEvents.push(1, e.x, e.y);
+      Dirty.mark();
+      if (this.onUrgent) this.onUrgent();
+      return true;
+    });
+    Input.route('up', e => {
+      this._pointerEvents.push(2, e.x, e.y);
+      Dirty.mark();
+      if (this.onUrgent) this.onUrgent();
+      return true;
+    });
     Input.route('click', e => { this._pointerEvents.push(3, e.x, e.y); Dirty.mark(); return true; });
     Input.route('wheel', e => { this._pointerEvents.push(4, e.x, e.y, e.dy); Dirty.mark(); return true; });
     Input.route('leave', () => { this._pointerEvents.push(5, -1e5, -1e5); Dirty.mark(); return false; });
@@ -141,6 +155,7 @@ export const UI = {
         ev
       });
       Dirty.mark();
+      if (this.onUrgent) this.onUrgent();
       return true;
     });
   },
@@ -175,6 +190,9 @@ export const UI = {
     this.time += dt;
     this.frameNo++;
     _poolI = 0;
+    /* o registro de caixas do QA vale por quadro: guardar posições de
+       quadros anteriores devolve o layout de ontem */
+    if (this._qa) this._qaRects.clear();
 
     /* --- drena a entrada acumulada desde o último desenho --- */
     this.pressed = this.released = this.clicked = false;

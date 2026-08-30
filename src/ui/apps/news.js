@@ -25,7 +25,7 @@ export const minW = 640, minH = 380;
 export const badge = () => Game.news.unreadCount();
 
 export function draw(r) {
-  const st = UI.state(id, () => ({ sel: 0, scroll: 0 }));
+  const st = UI.state(id, () => ({ sel: 0, scroll: 0, materia: { scroll: 0 } }));
   const feed = Game.news.feed();
   const S = Game.state;
 
@@ -55,7 +55,7 @@ export function draw(r) {
       rr.x + SPACE.md, rr.y + 54, FONT.dataSmall, C.textFaint);
   }, {
     rowH: 66, state: st, empty: 'nada no noticiário ainda',
-    onSelect: (i) => { if (feed[i]) { Game.news.markSeen(feed[i].id); Dirty.mark(); } }
+    onSelect: (i) => { if (feed[i]) { Game.news.markSeen(feed[i].id); Dirty.mark(); } st.materia.scroll = 0; }
   });
 
   /* ---- matéria + calor ---- */
@@ -80,10 +80,10 @@ export function draw(r) {
 
     W.separator(UI.stackTop(c, 10, SPACE.sm), C.line2);
 
-    Text.wrap(UI.ctx, n.body, FONT.body, c.w).forEach(q => {
-      const l = UI.stackTop(c, 21, 0);
-      Text.drawIn(UI.ctx, q, l.x, l.y, l.h, FONT.body, C.text, 'left');
-    });
+    /* a matéria rola: manchete longa mais corpo passava da caixa */
+    W.textBlock(id + ':materia:' + n.id, c,
+      [{ t: n.body, font: FONT.body, color: C.text }],
+      { state: st.materia });
   } else {
     Text.center(UI.ctx, 'selecione uma manchete', c.x, c.y, c.w, 60, FONT.body, C.textFaint);
   }

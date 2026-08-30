@@ -28,7 +28,7 @@ export const badge = (hud) => hud.unread;
 
 export function draw(r) {
   const S = Game.state;
-  const st = UI.state(id, () => ({ sel: 0, anexo: -1, scroll: 0 }));
+  const st = UI.state(id, () => ({ sel: 0, anexo: -1, scroll: 0, corpo: { scroll: 0 } }));
   const msgs = S.email;
 
   const listaR = UI.cutLeft(r, Math.max(260, Math.round(r.w * 0.34)));
@@ -71,7 +71,7 @@ export function draw(r) {
     rowH: 46,
     empty: 'nenhuma mensagem',
     state: st,
-    onSelect: (i) => { if (msgs[i] && !msgs[i].read) { msgs[i].read = true; Dirty.mark(); } st.anexo = -1; }
+    onSelect: (i) => { if (msgs[i] && !msgs[i].read) { msgs[i].read = true; Dirty.mark(); } st.anexo = -1; st.corpo.scroll = 0; }
   });
 
   /* ---------------- mensagem ---------------- */
@@ -109,21 +109,21 @@ export function draw(r) {
   const rodapeH = precisaEntrega ? 96 : 0;
   const corpoTexto = UI.rect(c.x, c.y, c.w, c.h - rodapeH);
 
-  UI.pushClip(corpoTexto.x, corpoTexto.y, corpoTexto.w, corpoTexto.h);
-  let y = corpoTexto.y + 4;
-  String(m.body).split('\n').forEach(linha => {
-    if (!linha.trim()) { y += 10; return; }
-    /* negrito em **texto** vira destaque de cor */
-    const destaque = /\*\*/.test(linha);
-    const limpa = linha.replace(/\*\*/g, '');
-    const quebradas = Text.wrap(UI.ctx, limpa, FONT.body, corpoTexto.w);
-    quebradas.forEach(q => {
-      Text.draw(UI.ctx, q, corpoTexto.x, y + 14, FONT.body,
-        destaque ? C.cyanBright : (/^ {2}/.test(q) ? C.textDim : C.text));
-      y += 21;
-    });
+  /* O corpo da mensagem rola: cortar no clipe deixava metade das
+     instruções de contrato invisíveis, sem nenhuma pista disso. */
+  const NL = String.fromCharCode(10);
+  const blocos = String(m.body).split(NL).map(linha => {
+    if (!linha.trim()) return { t: '', gap: 4 };
+    const destaque = linha.indexOf('**') >= 0;
+    const recuado = linha.startsWith('  ');
+    return {
+      t: linha.split('**').join(''),
+      font: FONT.body,
+      color: destaque ? C.cyanBright : (recuado ? C.textDim : C.text),
+      recuo: recuado ? SPACE.md : 0
+    };
   });
-  UI.popClip();
+  W.textBlock(id + ':corpo:' + m.id, corpoTexto, blocos, { state: st.corpo || (st.corpo = { scroll: 0 }) });
 
   /* ---------------- entrega de arquivo ---------------- */
   if (precisaEntrega) {
