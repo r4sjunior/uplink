@@ -3,12 +3,16 @@
    Um único lugar para o crítico visual e o perfilador mexerem.
    ========================================================= */
 
-const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-const mem = navigator.deviceMemory || 8;
+/* O núcleo do jogo também roda fora do navegador (tools/simtest.js),
+   então tudo que é global de browser passa por uma checagem. */
+const HAS_DOM = typeof document !== 'undefined' && typeof navigator !== 'undefined';
+const isMobile = HAS_DOM && /Android|iPhone|iPad/i.test(navigator.userAgent);
+const mem = (HAS_DOM && navigator.deviceMemory) || 8;
 
 /* Detecção de tier: swiftshader (headless de QA) cai em "low"
    mas ainda renderiza tudo — só com menos amostras. */
 function detectTier() {
+  if (!HAS_DOM) return 'high';          /* fora do navegador: sem limite */
   try {
     const c = document.createElement('canvas');
     const gl = c.getContext('webgl2') || c.getContext('webgl');
@@ -90,7 +94,7 @@ export const CFG = {
 };
 
 /* permite ao harness de QA forçar valores: ?tier=high&debug=1 */
-const q = new URLSearchParams(location.search);
+const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
 if (q.has('tier')) CFG.tier = q.get('tier');
 if (q.has('nopost')) CFG.post.enabled = false;
 if (q.has('raw')) CFG.debug.showSurfaceRaw = true;

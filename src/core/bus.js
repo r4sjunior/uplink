@@ -48,6 +48,22 @@ export const EV = {
   TRACE_END:      'net:trace:end',    /* {caught:bool} */
   BREACH:         'net:breach',       /* {layer, level} camada derrubada */
   ALARM:          'net:alarm',
+  ROUTE_CHANGED:  'net:route',        /* {route:[ip], target} */
+  LOG_CHANGED:    'net:logs',         /* {ip, action} */
+  TRACE_PASSIVE:  'net:trace:passive',/* {reached, total, caught, targetName} */
+
+  /* rede interna (LAN) */
+  LAN_SCAN:       'lan:scan',         /* {ip, found} */
+  LAN_PROBE:      'lan:probe',        /* {ip, nodeId} */
+  LAN_MOVE:       'lan:move',         /* {ip, nodeId, kind} */
+  LAN_FORCE:      'lan:force',        /* {ip, nodeId, ok} */
+  LAN_SPOOF:      'lan:spoof',        /* {ip, nodeId, ok} */
+  LAN_ISOLATE:    'lan:isolate',      /* {ip, subnet} isolamento disparado */
+
+  /* registros e auditoria */
+  BANK_TX:        'bank:tx',          /* {from, to, amount, taint} */
+  AUDIT:          'bank:audit',       /* {account, reason} */
+  RECORD_CHANGED: 'record:changed',   /* {kind, personId} */
 
   /* software / ferramentas */
   TOOL_RUN:       'sw:run',           /* {tool, version, target} */
@@ -62,6 +78,12 @@ export const EV = {
   CREDITS:        'eco:credits',      /* {balance, delta} */
   RATING:         'eco:rating',
   EMAIL_NEW:      'mail:new',
+  NEWS_NEW:       'news:new',         /* {id, head, body, source} */
+  LINK_NEW:       'link:new',         /* {ip, name} */
+  STORY:          'story:beat',       /* {phase, side, title} */
+  HARDWARE:       'hw:changed',       /* {slot, id} */
+  FILE_CHANGED:   'file:changed',     /* {ip, action, count} */
+  MEM_CHANGED:    'mem:changed',
 
   /* UI */
   UI_DIRTY:       'ui:dirty',         /* pede redesenho da superfície */
