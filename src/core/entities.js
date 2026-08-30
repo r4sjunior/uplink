@@ -7,6 +7,7 @@
    (world -> social -> net -> world).
    ========================================================= */
 import * as D from './data.js';
+import { hashString } from './rng.js';
 import { S, R } from './state.js';
 
 /* IP plausível. Recebe um rng para poder ser usado na geração
@@ -99,7 +100,16 @@ export function baseServer(rng, o) {
   const fallback = rng.pick(D.CITIES);
   const lat = o.lat !== undefined ? o.lat : (cityRec ? cityRec.lat : fallback[1]);
   const lon = o.lon !== undefined ? o.lon : (cityRec ? cityRec.lon : fallback[2]);
+  /* Deslocamento determinístico em torno da cidade.
+     Vários servidores compartilham a mesma cidade — Londres sozinha
+     hospeda o Uplink IS, o servidor público e a máquina de teste —
+     e sem isso eles caem exatamente no mesmo pixel do mapa: ficam
+     empilhados, e clicar num seleciona outro. O deslocamento vem do
+     endereço, então é sempre o mesmo para o mesmo servidor. */
   const xy = D.geoToXY(lat, lon);
+  const semente = hashString(o.ip || o.name || 'x');
+  xy.x = Math.min(0.995, Math.max(0.005, xy.x + (((semente >>> 0) % 1000) / 1000 - 0.5) * 0.030));
+  xy.y = Math.min(0.995, Math.max(0.005, xy.y + (((semente >>> 7) % 1000) / 1000 - 0.5) * 0.022));
   return {
     ip: o.ip || randIP(rng),
     name: o.name,

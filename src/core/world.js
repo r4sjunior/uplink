@@ -419,6 +419,57 @@ function openPlayerAccount(rng, world, handle) {
 }
 
 /* =========================================================
+   SEPARAÇÃO NO MAPA
+   O deslocamento por endereço já espalha servidores da mesma cidade,
+   mas com 116 deles em cerca de trinta cidades ainda sobram pares
+   quase colados — e dois pontos a meio pixel um do outro são um só
+   ponto para quem clica.
+
+   Esta passagem afasta quem estiver perto demais, com um limite de
+   quanto cada um pode andar: o servidor continua na região certa do
+   mundo, só não em cima do vizinho.
+   ========================================================= */
+const SEP_MIN = 0.016;          /* ~19 px num mapa de 1200 px */
+const DESVIO_MAX = 0.045;       /* o quanto pode se afastar da cidade */
+
+function separaNoMapa(world) {
+  const lista = Object.values(world.servers);
+  /* guarda a posição de origem para não deixar ninguém migrar de país */
+  lista.forEach(s => { s._x0 = s.x; s._y0 = s.y; });
+
+  for (let passe = 0; passe < 24; passe++) {
+    let moveu = 0;
+    for (let i = 0; i < lista.length; i++) {
+      for (let j = i + 1; j < lista.length; j++) {
+        const a = lista[i], b = lista[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= SEP_MIN) continue;
+        if (d < 1e-6) { dx = (i % 2 ? 1 : -1) * 1e-3; dy = 1e-3; d = Math.hypot(dx, dy); }
+        const empurra = (SEP_MIN - d) / 2;
+        const ux = dx / d, uy = dy / d;
+        a.x -= ux * empurra; a.y -= uy * empurra;
+        b.x += ux * empurra; b.y += uy * empurra;
+        moveu++;
+      }
+    }
+    /* prende cada um perto da cidade de origem e dentro do mapa */
+    lista.forEach(s => {
+      const dx = s.x - s._x0, dy = s.y - s._y0;
+      const d = Math.hypot(dx, dy);
+      if (d > DESVIO_MAX) {
+        s.x = s._x0 + (dx / d) * DESVIO_MAX;
+        s.y = s._y0 + (dy / d) * DESVIO_MAX;
+      }
+      s.x = Math.min(0.985, Math.max(0.015, s.x));
+      s.y = Math.min(0.975, Math.max(0.025, s.y));
+    });
+    if (!moveu) break;
+  }
+  lista.forEach(s => { delete s._x0; delete s._y0; });
+}
+
+/* =========================================================
    ENTRADA PÚBLICA
    ========================================================= */
 export function generate(seed, handle) {
@@ -432,6 +483,8 @@ export function generate(seed, handle) {
 
   world.people = People.generate(rng, 220);
   buildAccounts(rng, world);
+
+  separaNoMapa(world);
 
   /* logs de fundo em tudo: uma máquina sem histórico denuncia o truque */
   Object.values(world.servers).forEach(s => {

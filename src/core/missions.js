@@ -497,6 +497,14 @@ export function accept(id) {
   m.acceptedAt = S.time;
   S.missions.active.push(m);
 
+  /* O endereço do alvo vem escrito no contrato, então ele entra na
+     agenda. Sem isso o jogador recebe "invada tal servidor" e não
+     tem como localizá-lo no mapa — o alvo simplesmente não aparece. */
+  if (m.targetIp && !S.links.includes(m.targetIp)) {
+    S.links.push(m.targetIp);
+    Bus.emit(EV.LINK_NEW, { ip: m.targetIp, name: m.targetName });
+  }
+
   addEmail({
     from: m.employer.contact + ' <' + F.slug(m.employer.corp) + '.com>',
     subj: 'Contrato aceito: ' + m.title,
