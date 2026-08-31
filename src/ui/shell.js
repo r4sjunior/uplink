@@ -216,6 +216,8 @@ export const Shell = {
         if (this._hud.tasks.length) Dirty.mark();     /* barras em movimento */
       }
       this._connAnim = Math.min(1, this._connAnim + dt * 0.9);
+      /* a discagem é animada: o painel precisa de quadros */
+      if (Game.state.conn && Game.state.conn.dial) Dirty.mark();
     }
 
     if (this._traceUI.ativo) Dirty.mark();
@@ -635,8 +637,10 @@ export const Shell = {
 
     /* --- botão de desconectar --- */
     const btnR = UI.stackTop(col, METRIC.btnH, SPACE.sm);
-    if (hud.connected) {
-      if (W.button('side:disc', btnR, 'DESCONECTAR', { danger: true, font: FONT.button })) {
+    if (hud.connected || Game.state.conn.dial) {
+      if (W.button('side:disc', btnR,
+        Game.state.conn.dial ? 'CANCELAR' : 'DESCONECTAR',
+        { danger: true, font: FONT.button })) {
         Game.net.disconnect();
       }
     } else {
@@ -652,7 +656,9 @@ export const Shell = {
 
   _miniMapa(r, hud) {
     const ctx = UI.ctx;
-    if (!WorldMap.desenha(ctx, r, 'mini')) {
+    /* o mini-mapa mostra sempre o mundo inteiro: ele é orientação,
+       não ferramenta — quem aproxima é a tela de ROTA */
+    if (!WorldMap.desenha(ctx, r, this._vistaMini || (this._vistaMini = WorldMap.novaVista()))) {
       UI.fillVGrad(r.x, r.y, r.w, r.h, '#071634', '#030a1c');
     }
     UI.frameR(r, C.line2, 1);
@@ -715,6 +721,54 @@ export const Shell = {
   _analisador(r, hud) {
     const ctx = UI.ctx;
     const inner = W.panel(r, 'ANALISADOR DE CONEXÃO', { padX: SPACE.sm, padY: SPACE.sm });
+
+    /* ---- discando: a rota sendo percorrida, salto a salto ---- */
+    const dial = Game.state.conn.dial;
+    if (dial && !hud.connected) {
+      const S2 = Game.state;
+      Text.center(ctx, 'DISCANDO', inner.x, inner.y, inner.w, 26,
+        FONT.label, C.warnBright);
+
+      const passo = Math.min(48, Math.floor((inner.h - 60) / Math.max(1, dial.total)));
+      let y = inner.y + 34;
+      const cx = inner.x + 30;
+
+      dial.cadeia.forEach((ip, i) => {
+        const sv = S2.world.servers[ip];
+        const feito = i < dial.etapa;
+        const atual = i === dial.etapa;
+        const cor = feito ? C.ok : atual ? C.warnBright : alpha(C.textFaint, 0.5);
+
+        if (i < dial.cadeia.length - 1) {
+          ctx.strokeStyle = feito ? alpha(C.ok, 0.8) : alpha(C.textFaint, 0.3);
+          ctx.setLineDash([2, 4]);
+          ctx.lineDashOffset = feito ? 0 : -(this._t * 20) % 6;
+          ctx.beginPath();
+          ctx.moveTo(cx, y + 18); ctx.lineTo(cx, y + passo);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        /* o salto atual pulsa enquanto é atravessado */
+        if (atual) {
+          const k = 0.5 + 0.5 * Math.sin(this._t * 7);
+          ctx.beginPath();
+          ctx.arc(cx, y + 10, 10 + k * 5, 0, Math.PI * 2);
+          ctx.fillStyle = alpha(C.warn, 0.18 * (1 - k));
+          ctx.fill();
+        }
+        Icon.monitor(ctx, cx, y + 10, 13, cor);
+        Text.drawFit(ctx, sv ? sv.name : ip, cx + 22, y + 8,
+          inner.w - 26 - 30, FONT.dataSmall, cor);
+        Text.draw(ctx, feito ? 'ok' : atual ? 'roteando…' : 'aguarda',
+          cx + 22, y + 21, FONT.dataSmall, alpha(cor, 0.75));
+        y += passo;
+      });
+
+      const barra = UI.rect(inner.x, inner.y + inner.h - 22, inner.w, 10);
+      W.progress(barra, (dial.etapa / dial.total) * 100, { color: C.warnBright });
+      return;
+    }
 
     if (!hud.connected) {
       Text.center(ctx, 'sem conexão ativa', inner.x, inner.y, inner.w, 60,

@@ -61,7 +61,7 @@ export default async function (page, ctx) {
   /* a tela de rota abre sozinha; conecta sem montar rota nenhuma */
   await quadros(page, 8);
   const conectouDireto = await clica(page, 'route:conn');
-  await quadros(page, 8);
+  await quadros(page, 40);
   let vivo = await page.evaluate(() => window.__UPLINK.Game.state.conn.live);
   ok('CONECTAR funciona com rota direta', conectouDireto && vivo === true,
     'clicou=' + conectouDireto + ' vivo=' + vivo);
@@ -108,7 +108,7 @@ export default async function (page, ctx) {
 
   await abre(page, 'route');
   const conectouC = await clica(page, 'route:conn');
-  await quadros(page, 8);
+  await quadros(page, 40);
   vivo = await page.evaluate(() => window.__UPLINK.Game.state.conn.live);
   ok('CONECTAR funciona com alvo vindo de LINKS', conectouC && vivo === true,
     'clicou=' + conectouC + ' vivo=' + vivo);

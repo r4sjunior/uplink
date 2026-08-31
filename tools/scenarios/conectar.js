@@ -30,22 +30,25 @@ async function clicaEm(page, id) {
   await quadros(page, 4);
   return true;
 }
-/* clica num servidor do mapa pela posição geográfica dele */
+/* Clica num servidor do mapa usando a PROJEÇÃO REAL da tela:
+   a caixa do mapa e a vista atual vêm do próprio aplicativo. */
 async function clicaNo(page, ip) {
   const p = await page.evaluate(async (alvo) => {
     const t = await import('/src/ui/toolkit.js');
-    const m = await import('/src/ui/windows.js');
-    const w = m.Windows.get('route');
-    const S = window.__UPLINK.Game.state;
-    const sv = S.world.servers[alvo];
-    if (!w || !sv) return null;
-    /* o mapa ocupa a janela menos o painel de 320 e as bordas */
-    const inner = { x: w.x + 1 + 12, y: w.y + 30 + 12, w: w.w - 2 - 24, h: w.h - 30 - 24 };
-    const mapaW = inner.w - 320 - 12;
-    return {
-      x: Math.round(inner.x + 1 + sv.x * (mapaW - 2)),
-      y: Math.round(inner.y + 1 + sv.y * (inner.h - 2))
-    };
+    const M = await import('/src/ui/worldmap.js');
+    const caixa = t.UI.rectOf('route:mapa');
+    const st = t.UI.state('route');
+    const sv = window.__UPLINK.Game.state.world.servers[alvo];
+    if (!caixa || !sv) return null;
+    const r = { x: caixa[0], y: caixa[1], w: caixa[2], h: caixa[3] };
+    const q = M.paraPixel(r, st.vista, sv.x, sv.y);
+    /* fora da vista atual? centraliza primeiro */
+    if (q.x < r.x + 8 || q.x > r.x + r.w - 8 || q.y < r.y + 8 || q.y > r.y + r.h - 8) {
+      M.centraliza(st.vista, r, sv.x, sv.y);
+      const q2 = M.paraPixel(r, st.vista, sv.x, sv.y);
+      return { x: Math.round(q2.x), y: Math.round(q2.y) };
+    }
+    return { x: Math.round(q.x), y: Math.round(q.y) };
   }, ip);
   if (!p) return false;
   await page.mouse.move(p.x, p.y);
@@ -113,7 +116,8 @@ export default async function (page, ctx) {
 
   /* --- conecta --- */
   const clicouConn = await clicaEm(page, 'route:conn');
-  await quadros(page, 8);
+  /* a conexão não é mais instantânea: a rota é discada salto a salto */
+  await quadros(page, 40);
   const vivo = await page.evaluate(() => window.__UPLINK.Game.state.conn.live);
   ok('botão CONECTAR foi localizado', clicouConn);
   ok('conexão foi estabelecida', vivo === true);

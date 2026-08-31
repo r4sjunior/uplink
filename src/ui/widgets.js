@@ -144,6 +144,14 @@ export const Icon = {
     ctx.moveTo(cx + s * 0.26, cy - s * 0.26); ctx.lineTo(cx - s * 0.26, cy + s * 0.26);
     ctx.stroke();
   },
+  /* mais: o par do `minus`, que já existia sozinho */
+  plus(ctx, cx, cy, s, col) {
+    const h = s / 2, e = Math.max(1.5, s * 0.16);
+    ctx.fillStyle = col;
+    ctx.fillRect(cx - h, cy - e / 2, s, e);
+    ctx.fillRect(cx - e / 2, cy - h, e, s);
+  },
+
   minus(ctx, cx, cy, s, col) {
     ctx.fillStyle = col;
     ctx.fillRect(cx - s * 0.28, cy - Math.max(1, s * 0.06), s * 0.56, Math.max(2, s * 0.12));

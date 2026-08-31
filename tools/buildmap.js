@@ -21,10 +21,14 @@ const SAIDA = path.join(ROOT, 'assets', 'worldmap.json');
 /* escala do inteiro: 4095 = 12 bits, precisão de ~9 km no equador */
 const ESCALA = 4095;
 /* tolerância do Douglas-Peucker, em graus */
-const TOLERANCIA = 0.62;
+/* Tolerância do Douglas-Peucker, em graus.
+   Era 0,62 quando o mapa só aparecia inteiro. Com aproximação até
+   7x o litoral simplificado demais vira polígono anguloso na tela,
+   então vale gastar alguns quilobytes a mais em vértices. */
+const TOLERANCIA = 0.16;
 /* área mínima de um polígono para entrar (graus²): corta ilhotas
    que viram um pixel sujo na tela */
-const AREA_MIN = 1.1;
+const AREA_MIN = 0.55;
 
 /* --------------------------------------------------------
    Douglas-Peucker

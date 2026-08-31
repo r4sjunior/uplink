@@ -113,7 +113,12 @@ ok(typeof semAlvo === 'string', 'conectar sem alvo é recusado', semAlvo);
 
 Net.setTarget(estreia.targetIp);
 const erroConn = Net.connect();
-ok(erroConn === null, 'conexão estabelecida', erroConn || '');
+ok(erroConn === null, 'discagem iniciada', erroConn || '');
+ok(!!S.conn.dial, 'a discagem percorre a rota salto a salto');
+/* a discagem leva tempo real: sem isso a conexão não abre */
+ok(!ate(() => S.conn.live, 0.3, 'conexão instantânea'),
+  'conectar NÃO é instantâneo — a rota é percorrida');
+ok(ate(() => S.conn.live, 8, 'discagem'), 'conexão estabelecida ao fim da discagem');
 ok(S.conn.live === true, 'conexão está viva');
 ok(S.conn.trail.length === 4, 'trilha gravou um log por máquina', S.conn.trail.length + ' elos');
 ok(eventos['net:connect:open'] > 0, 'evento de conexão emitido');
@@ -199,7 +204,7 @@ function invadir(apagarTrilha) {
     .filter(s => s.ip !== monitorado.ip).slice(0, 2)
     .forEach(s => Net.addHop(s.ip));
   Net.setTarget(monitorado.ip);
-  Net.connect();
+  Net.connect({ instant: true });
   monitorado.st.logged = true;            /* atalho: a senha não é o assunto aqui */
   monitorado.st.fwDown = true;
   Net.illegal(monitorado, 2);             /* dispara o monitor */

@@ -123,14 +123,100 @@ export function estimateTrace(targetIp) {
 /* =========================================================
    CONECTAR
    ========================================================= */
-export function connect() {
+/* =========================================================
+   DISCAGEM
+
+   Conectar deixou de ser instantâneo. A rota é percorrida salto a
+   salto, cada um levando um instante, e só no fim a conexão abre.
+
+   Não é enfeite: é o que dá peso à decisão de rota. Uma rota de
+   sete saltos DEMORA para subir, e essa demora é sentida — o mesmo
+   comprimento que depois vai te salvar do trace passivo cobra o
+   preço na entrada. E a discagem pode ser cancelada no meio, sem
+   deixar rastro, porque nenhum log é gravado antes de ela terminar.
+   ========================================================= */
+
+/* segundos reais por salto */
+const TEMPO_POR_SALTO = 0.42;
+/* aperto de mão final com o alvo */
+const TEMPO_HANDSHAKE = 0.65;
+
+export function connect(opts) {
   if (S.over) return 'A partida acabou.';
   if (S.conn.live) return 'Já existe uma conexão ativa.';
+  if (S.conn.dial) return 'A discagem já está em andamento.';
   const ip = S.conn.target;
   if (!ip) return 'Nenhum alvo definido.';
   const target = srv(ip);
   if (!target) return 'IP inválido ou servidor inexistente.';
   if (S.conn.route.includes(ip)) return 'O alvo não pode estar na própria rota de bounce.';
+
+  const cadeia = S.conn.route.concat([ip]);
+  S.conn.dial = {
+    etapa: 0,
+    total: cadeia.length,
+    t: 0,
+    passo: TEMPO_POR_SALTO,
+    cadeia: cadeia
+  };
+
+  Bus.emit(EV.DIAL_BEGIN, {
+    total: cadeia.length,
+    targetIp: ip,
+    targetName: target.name,
+    hops: cadeia.map(h => {
+      const sv = srv(h);
+      return sv ? { ip: sv.ip, name: sv.name, x: sv.x, y: sv.y } : { ip: h, name: h };
+    })
+  });
+  Bus.emit(EV.SFX, { name: 'dial' });
+
+  /* os testes e o carregamento de save precisam do caminho direto */
+  if (opts && opts.instant) {
+    while (S.conn.dial) tickDiscagem(9);
+  }
+  return null;
+}
+
+/** Avança a discagem. Chamado por `tick`, com o delta REAL. */
+function tickDiscagem(dt) {
+  const d = S.conn.dial;
+  if (!d) return;
+  d.t += dt;
+
+  /* o último passo é o aperto de mão, mais demorado */
+  const limite = d.etapa >= d.total - 1 ? TEMPO_HANDSHAKE : d.passo;
+  if (d.t < limite) {
+    Bus.emit(EV.DIAL_PROGRESS, {
+      etapa: d.etapa, total: d.total,
+      pct: ((d.etapa + d.t / limite) / d.total) * 100
+    });
+    return;
+  }
+
+  d.t = 0;
+  const ip = d.cadeia[d.etapa];
+  const sv = srv(ip);
+  Bus.emit(EV.HOP_REACHED, {
+    index: d.etapa, ip: ip,
+    name: sv ? sv.name : ip,
+    ultimo: d.etapa === d.total - 1,
+    lat: sv ? sv.lat : 0, lon: sv ? sv.lon : 0
+  });
+  d.etapa++;
+
+  if (d.etapa >= d.total) {
+    S.conn.dial = null;
+    abreConexao();
+  }
+}
+
+/* Fecha a conexão de verdade: é AQUI que os logs são gravados.
+   Antes disso, cancelar a discagem não deixa rastro nenhum. */
+function abreConexao() {
+  const ip = S.conn.target;
+  const target = srv(ip);
+  if (!target) return;
 
   /* a trilha: gateway -> hop1 -> ... -> alvo. Cada máquina grava
      de onde a conexão veio. É essa cadeia que o trace passivo segue. */
@@ -139,8 +225,8 @@ export function connect() {
   for (let i = 1; i < chain.length; i++) {
     const here = chain[i];
     const prev = chain[i - 1];
-    const s = srv(here);
-    if (!s) continue;
+    const sv = srv(here);
+    if (!sv) continue;
     const fromIP = prev === 'GATEWAY' ? playerIP() : prev;
     const isTarget = (i === chain.length - 1);
     const log = makeLog(R, S.time,
@@ -148,7 +234,7 @@ export function connect() {
         : 'Roteamento: ' + fromIP + ' → ' + chain[i + 1],
       'route');
     log.fromIP = fromIP;
-    s.logs.unshift(log);
+    sv.logs.unshift(log);
     trail.push({ ip: here, logId: log.id });
   }
 
@@ -166,21 +252,21 @@ export function connect() {
   Bus.emit(EV.CONNECT_BEGIN, {
     route: S.conn.route.slice(), targetIp: ip,
     hops: chain.slice(1).map(h => {
-      const s = srv(h);
-      return s ? { ip: s.ip, name: s.name, lat: s.lat, lon: s.lon } : { ip: h };
+      const sv = srv(h);
+      return sv ? { ip: sv.ip, name: sv.name, lat: sv.lat, lon: sv.lon } : { ip: h };
     })
   });
-  /* os saltos são anunciados um a um para a UI e o mapa animarem */
-  S.conn.route.forEach((hopIp, idx) => {
-    const s = srv(hopIp);
-    Bus.emit(EV.HOP_REACHED, {
-      index: idx, ip: hopIp, name: s ? s.name : hopIp,
-      lat: s ? s.lat : 0, lon: s ? s.lon : 0
-    });
-  });
   Bus.emit(EV.CONNECT_OPEN, { server: serverView(target) });
-  Bus.emit(EV.SFX, { name: 'dial' });
-  return null;
+}
+
+/** Cancela a discagem em andamento. Não deixa rastro. */
+export function abortDial() {
+  if (!S.conn.dial) return false;
+  S.conn.dial = null;
+  Bus.emit(EV.DIAL_ABORT, {});
+  Bus.emit(EV.SFX, { name: 'disconnect' });
+  Bus.emit(EV.UI_TOAST, { text: 'Discagem cancelada. Nenhum registro foi gravado.', kind: '' });
+  return true;
 }
 
 export function firstScreen(server) {
@@ -205,6 +291,8 @@ export function serverView(server) {
    DESCONECTAR
    ========================================================= */
 export function disconnect(silent) {
+  /* discando ainda: cancelar é limpo, porque nenhum log foi gravado */
+  if (S.conn.dial) { abortDial(); return; }
   if (!S.conn.live) return;
   const wasIllegal = S.conn.illegal;
   const hadTrace = !!S.conn.trace;
@@ -265,6 +353,8 @@ export function illegal(server, weight) {
    ========================================================= */
 export function tick(dtReal) {
   if (S.over) return;
+
+  if (S.conn.dial) tickDiscagem(dtReal);
 
   if (S.conn.live && S.conn.trace) {
     const tr = S.conn.trace;

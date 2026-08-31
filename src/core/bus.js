@@ -39,6 +39,9 @@ export const EV = {
   SAVE:           'game:save',
 
   /* conexão / rede */
+  DIAL_BEGIN:     'net:dial:begin',   /* {total, targetIp, hops} */
+  DIAL_PROGRESS:  'net:dial:progress',/* {etapa, total, pct} */
+  DIAL_ABORT:     'net:dial:abort',
   CONNECT_BEGIN:  'net:connect:begin',/* {route:[ip], targetIp} */
   CONNECT_OPEN:   'net:connect:open', /* {server} */
   CONNECT_CLOSE:  'net:connect:close',

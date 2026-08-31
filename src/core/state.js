@@ -78,6 +78,8 @@ export function emptyState() {
 export function newConn() {
   return {
     route: [], target: null, live: false, screen: null,
+    /* discagem em andamento; null quando não há */
+    dial: null,
     trace: null, trail: [], illegal: false, startedAt: 0,
     bounceIndex: 0, lan: null
   };
