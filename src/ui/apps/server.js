@@ -16,6 +16,7 @@ import * as F from '../../core/fmt.js';
 import * as CCTV from '../../core/cctv.js';
 import * as Social from '../../core/social.js';
 import * as LAN from '../../core/lan.js';
+import * as CamView from '../camview.js';
 import { UI, HOVER, CLICK } from '../toolkit.js';
 import { W, Icon } from '../widgets.js';
 import { Text } from '../text.js';
@@ -351,6 +352,8 @@ function executa(sv, st) {
    CÂMERAS
    ========================================================= */
 function telaCCTV(r, sv, st) {
+  /* a imagem se mexe: sem isto ela congela entre um clique e outro */
+  Dirty.mark();
   const grade = CCTV.grid(sv);
   if (grade.erro) return barreira(r, grade.erro, 'firewall');
 
@@ -393,97 +396,14 @@ function telaCCTV(r, sv, st) {
   }
 }
 
-/* A imagem da câmera: a cena é desenhada, não é vídeo. */
+/* A imagem da câmera vive em ui/camview.js: é uma cena em
+   perspectiva, com mobília por local, pessoas com passada e sombra,
+   e o comportamento do sensor por cima (vinheta, ruído,
+   entrelaçamento, erro de compressão, visão noturna). */
 function desenhaCamera(r, v, grande) {
   if (!v) return;
-  const ctx = UI.ctx;
-  UI.fill(r.x, r.y, r.w, r.h, v.night ? '#04060a' : '#0a0f14');
-  UI.frameR(r, C.line2, 1);
-
-  ctx.save();
-  ctx.beginPath(); ctx.rect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); ctx.clip();
-
-  /* chão em perspectiva */
-  const horizonte = r.y + r.h * 0.34;
-  const g = ctx.createLinearGradient(0, horizonte, 0, r.y + r.h);
-  g.addColorStop(0, v.night ? '#0b1118' : '#141c24');
-  g.addColorStop(1, v.night ? '#05080c' : '#0a0e13');
-  ctx.fillStyle = g;
-  ctx.fillRect(r.x, horizonte, r.w, r.h - (horizonte - r.y));
-
-  /* parede ao fundo */
-  ctx.fillStyle = v.night ? '#080c12' : '#101820';
-  ctx.fillRect(r.x, r.y, r.w, horizonte - r.y);
-  UI.hline(r.x, horizonte, r.w, alpha('#3d5670', 0.5));
-
-  /* linhas de fuga */
-  ctx.strokeStyle = alpha('#3d5670', 0.22);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let i = -2; i <= 6; i++) {
-    ctx.moveTo(r.x + r.w * (0.5 + i * 0.06), horizonte);
-    ctx.lineTo(r.x + r.w * (0.5 + i * 0.42), r.y + r.h);
-  }
-  ctx.stroke();
-
-  /* figurantes */
-  (v.atores || []).forEach(a => {
-    const X = r.x + a.x * r.w;
-    const base = horizonte + (r.h - (horizonte - r.y)) * a.y;
-    const alt = (r.h * 0.20) * a.scale;
-    const larg = alt * 0.30;
-    ctx.fillStyle = a.kind === 'guarda' ? alpha('#7fa8d8', 0.85)
-      : a.kind === 'carrinho' ? alpha('#c8a25a', 0.8)
-      : alpha('#93a6bb', 0.75);
-    /* corpo */
-    ctx.fillRect(X - larg / 2, base - alt, larg, alt * 0.72);
-    /* cabeça */
-    ctx.beginPath();
-    ctx.arc(X, base - alt - larg * 0.42, larg * 0.36, 0, Math.PI * 2);
-    ctx.fill();
-    /* sombra */
-    ctx.fillStyle = alpha('#000000', 0.4);
-    ctx.beginPath();
-    ctx.ellipse(X, base, larg * 0.7, larg * 0.22, 0, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  /* ruído de vídeo */
-  const n = Math.round(r.w * r.h * v.noise * 0.006);
-  ctx.fillStyle = alpha('#ffffff', 0.10);
-  for (let i = 0; i < n; i++) {
-    ctx.fillRect(r.x + Math.random() * r.w, r.y + Math.random() * r.h, 1, 1);
-  }
-  if (v.glitch) {
-    const gy = r.y + Math.random() * r.h;
-    ctx.fillStyle = alpha('#ffffff', 0.13);
-    ctx.fillRect(r.x, gy, r.w, 2 + Math.random() * 5);
-  }
-
-  /* linhas de varredura */
-  ctx.fillStyle = alpha('#000000', 0.20);
-  for (let y = r.y; y < r.y + r.h; y += 3) ctx.fillRect(r.x, y, r.w, 1);
-
-  ctx.restore();
-
-  /* carimbo */
-  Text.draw(ctx, v.stamp, r.x + SPACE.xs, r.y + 16, FONT.dataSmall, alpha('#d8e6f4', 0.9));
-  if (v.recording) {
-    const pisca = (UI.time * 1.4) % 1 < 0.6;
-    if (pisca) {
-      ctx.beginPath();
-      ctx.arc(r.x + r.w - 26, r.y + 12, 4, 0, Math.PI * 2);
-      ctx.fillStyle = C.dangerBright; ctx.fill();
-    }
-    Text.draw(ctx, 'REC', r.x + r.w - 18, r.y + 16, FONT.dataSmall, C.dangerBright);
-  }
-  if (v.looped) {
-    UI.frameR(r, C.warnBright, 2);
-    Text.center(ctx, 'SINAL EM LOOP', r.x, r.y + r.h - 26, r.w, 20, FONT.label, C.warnBright);
-  }
-  if (!grande) {
-    Text.draw(ctx, v.label, r.x + SPACE.xs, r.y + r.h - 8, FONT.dataSmall, alpha('#d8e6f4', 0.75));
-  }
+  CamView.desenha(UI.ctx, r, v, { grande: grande });
+  UI.frameR(r, grande ? C.line3 : C.line2, 1);
 }
 
 /* =========================================================
