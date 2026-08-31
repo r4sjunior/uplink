@@ -80,6 +80,8 @@ export function newConn() {
     route: [], target: null, live: false, screen: null,
     /* discagem em andamento; null quando não há */
     dial: null,
+    /* conta bancária aberta na sessão; null quando não há */
+    bankAcc: null,
     trace: null, trail: [], illegal: false, startedAt: 0,
     bounceIndex: 0, lan: null
   };

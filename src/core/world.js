@@ -375,7 +375,7 @@ function buildAccounts(rng, world) {
       personId: p.id,
       pass: makePassword(rng, false),
       balance: balance,
-      statement: [],
+      statements: [],
       isPlayer: false
     };
     bank.accounts.push(acc);
@@ -392,7 +392,7 @@ function buildAccounts(rng, world) {
       corpId: c.id,
       pass: makePassword(rng, true),
       balance: rng.int(60000, 900000) * c.size,
-      statement: [],
+      statements: [],
       isPlayer: false
     };
     bank.accounts.push(acc);
@@ -408,9 +408,11 @@ function openPlayerAccount(rng, world, handle) {
     owner: handle,
     pass: makePassword(rng, false),
     balance: 3000,
-    statement: [{
-      t: S.time, amount: 3000, balance: 3000,
-      text: 'Depósito inicial — Uplink Corporation', kind: 'in'
+    /* o campo é `statements`: é assim que bank.js grava, e usar o
+       singular aqui fazia o extrato do agente nascer vazio */
+    statements: [{
+      t: S.time, amt: 3000, bal: 3000,
+      txt: 'Depósito inicial — Uplink Corporation'
     }],
     isPlayer: true
   };

@@ -304,6 +304,8 @@ export function disconnect(silent) {
   S.conn.trace = null;
   S.conn.screen = null;
   S.conn.lan = null;
+  S.conn.bankAcc = null;
+  S.conn.watching = null;
   if (target) resetSession(target);
   if (hadTrace) bump('tracesEscaped');
 

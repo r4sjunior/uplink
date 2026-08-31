@@ -58,6 +58,38 @@ export function learnAccount(no, pass) {
 }
 
 /* =========================================================
+   SESSÃO NUM BANCO
+
+   Entrar num banco é entrar numa CONTA, não no servidor. O sistema
+   do banco não tem senha de máquina: ele pergunta número e senha da
+   conta, e é isso que separa quem descobriu as credenciais de quem
+   só chegou até a porta.
+   ========================================================= */
+export function openAccount(no, pass) {
+  const hit = findAccount(no);
+  if (!hit) return { erro: 'Conta não encontrada neste banco.' };
+  if (String(hit.acc.pass) !== String(pass)) {
+    /* tentativa falha fica registrada: bancos auditam isso */
+    logHit(hit.bank, 'Falha de autenticação na conta ' + no, 'sys');
+    return { erro: 'Senha incorreta.' };
+  }
+  S.flags.knownAccounts = S.flags.knownAccounts || {};
+  S.flags.knownAccounts[no] = true;
+  S.conn.bankAcc = String(no);
+  logHit(hit.bank, 'Acesso à conta ' + no + ' a partir de ' + S.playerIP, 'sys');
+  Bus.emit(EV.BANK_TX, { acao: 'login', conta: no });
+  return { ok: true, conta: statementView(no, 40) };
+}
+
+export function closeAccount() { S.conn.bankAcc = null; }
+
+/** A conta aberta na sessão atual, se houver. */
+export function openView(limit) {
+  if (!S.conn.bankAcc) return null;
+  return statementView(S.conn.bankAcc, limit || 40);
+}
+
+/* =========================================================
    PAGAMENTO AO JOGADOR
    Todo crédito e débito do agente passa por aqui.
    ========================================================= */

@@ -17,6 +17,9 @@ import * as CCTV from '../../core/cctv.js';
 import * as Social from '../../core/social.js';
 import * as LAN from '../../core/lan.js';
 import * as CamView from '../camview.js';
+import * as TelaBanco from '../screens/bank.js';
+import * as TelaRegistros from '../screens/records.js';
+import * as TelaLAN from '../screens/lan.js';
 import { UI, HOVER, CLICK } from '../toolkit.js';
 import { W, Icon } from '../widgets.js';
 import { Text } from '../text.js';
@@ -38,7 +41,13 @@ export function draw(r) {
   const S = Game.state;
   const st = UI.state(id, () => ({
     aba: 0, sel: 0, scroll: 0, senha: '', busca: '',
-    cam: null, perfil: null, cmd: '', term: []
+    cam: null, perfil: null, cmd: '', term: [],
+    /* banco */
+    bconta: '', bsenha: '', bmsg: '', bdest: 0, bvalor: '',
+    /* registros */
+    pessoa: null,
+    /* rede interna */
+    lanSel: null
   }));
 
   if (!S.conn.live) {
@@ -489,7 +498,7 @@ function telaSocial(r, sv, st) {
   const podeEscrever = Game.net.canWrite(sv);
   const b1 = UI.cutLeft(btsR, 150); UI.cutLeft(btsR, SPACE.sm);
   const b2 = UI.cutLeft(btsR, 170); UI.cutLeft(btsR, SPACE.sm);
-  const b3 = UI.cutLeft(btsR, 190);
+  const b3 = UI.cutLeft(btsR, 230);
 
   if (W.button(id + ':spost', b1, 'PUBLICAR', { primary: true, disabled: !podeEscrever })) {
     const contrato = Game.state.missions.active.find(m =>
@@ -502,145 +511,21 @@ function telaSocial(r, sv, st) {
     const res = Social.wipe(sv, st.perfil);
     aviso(res.erro, res.texto);
   }
-  if (W.button(id + ':sdm', b3, 'EXPORTAR MENSAGENS')) {
+  if (W.button(id + ':sdm', b3, 'EXPORTAR CONVERSAS')) {
     const res = Social.exportDMs(sv, st.perfil);
     aviso(res.erro, res.texto);
   }
 }
 
 /* =========================================================
-   BANCO E REGISTROS — versões enxutas mas funcionais
+   BANCO, REGISTROS E REDE INTERNA
+   Cada uma vive no próprio módulo em ui/screens/: são telas com
+   fluxo próprio (autenticação de conta, formulário de ficha, mapa de
+   topologia) e não cabiam como funções soltas aqui dentro.
    ========================================================= */
-function telaBanco(r, sv, st) {
-  const bloqueio = Game.net.readBlock(sv);
-  if (bloqueio) return barreira(r, bloqueio, 'firewall');
-
-  const conhecidas = Game.bank.knownAccounts().filter(a => a.bank.ip === sv.ip);
-  const btsR = UI.cutBottom(r, METRIC.btnH + SPACE.sm);
-
-  UI.fill(r.x, r.y, r.w, r.h, alpha(C.wellBottom, 0.6));
-  UI.frameR(r, C.line1, 1);
-  W.list(id + ':contas', UI.pad(r, 1, 1), conhecidas.length, (i, rr) => {
-    const a = conhecidas[i].acc;
-    Icon.money(UI.ctx, rr.x + SPACE.md, rr.y + rr.h / 2, 13, a.isPlayer ? C.okBright : C.cyan);
-    Text.draw(UI.ctx, a.no, rr.x + 34, rr.y + 22, FONT.data, C.text);
-    Text.drawFit(UI.ctx, a.owner, rr.x + 160, rr.y + 22, rr.w - 340, FONT.body,
-      a.isPlayer ? C.okBright : C.text);
-    Text.draw(UI.ctx, F.credits(a.balance), rr.x + rr.w - SPACE.md, rr.y + 22,
-      FONT.dataStrong, C.okBright, 'right');
-  }, { rowH: 38, state: st, empty: 'nenhuma conta conhecida neste banco — descubra número e senha primeiro' });
-
-  const b1 = UI.cutLeft(btsR, 190);
-  if (W.button(id + ':transf', b1, 'TRANSFERIR FUNDOS', { primary: true, disabled: conhecidas.length < 2 })) {
-    Bus.emit(EV.UI_TOAST, {
-      text: 'Selecione origem e destino: a transferência deixa rastro nos dois bancos.',
-      kind: 'warn'
-    });
-  }
-}
-
-function telaRegistros(r, sv, st) {
-  const bloqueio = Game.net.readBlock(sv);
-  if (bloqueio) return barreira(r, bloqueio, 'firewall');
-
-  const buscaR = UI.stackTop(r, METRIC.fieldH, SPACE.sm);
-  W.bind(id + ':rbusca', buscaR, st, 'busca', { placeholder: 'buscar pessoa pelo nome' });
-
-  const q = String(st.busca || '').trim();
-  const achados = q.length >= 2
-    ? Game.state.world.people.filter(p => F.norm(p.name).includes(F.norm(q))).slice(0, 60)
-    : [];
-
-  UI.fill(r.x, r.y, r.w, r.h, alpha(C.wellBottom, 0.6));
-  UI.frameR(r, C.line1, 1);
-  W.list(id + ':pessoas', UI.pad(r, 1, 1), achados.length, (i, rr) => {
-    const p = achados[i];
-    Text.drawFit(UI.ctx, p.name, rr.x + SPACE.md, rr.y + 22, 260, FONT.body, C.text);
-    Text.draw(UI.ctx, String(p.born), rr.x + 300, rr.y + 22, FONT.data, C.textDim);
-    Text.drawFit(UI.ctx, p.city, rr.x + 370, rr.y + 22, 160, FONT.bodySmall, C.textFaint);
-    if (sv.type === 'criminal') {
-      Text.draw(UI.ctx, p.criminal.length + ' registro(s)', rr.x + rr.w - SPACE.md, rr.y + 22,
-        FONT.dataSmall, p.criminal.length ? C.dangerBright : C.ok, 'right');
-    } else if (sv.type === 'academic') {
-      Text.drawFit(UI.ctx, p.academic.wiped ? 'histórico apagado' : p.academic.degree,
-        rr.x + 540, rr.y + 22, rr.w - 560, FONT.bodySmall,
-        p.academic.wiped ? C.warnBright : C.textDim);
-    }
-  }, { rowH: 36, state: st, empty: q.length >= 2 ? 'nada encontrado' : 'digite ao menos duas letras' });
-}
-
-/* =========================================================
-   REDE INTERNA
-   ========================================================= */
-function telaLAN(r, sv, st) {
-  const mapa = LAN.mapView(sv);
-  const btsR = UI.cutBottom(r, METRIC.btnH + SPACE.sm);
-
-  UI.fillVGrad(r.x, r.y, r.w, r.h, '#050e1e', '#02060e');
-  UI.frameR(r, C.line2, 1);
-
-  const nos = mapa.nodes || [];
-  if (!nos.length) {
-    Text.center(UI.ctx, 'rede não mapeada — execute o LAN_Scan',
-      r.x, r.y, r.w, r.h, FONT.body, C.textFaint);
-  } else {
-    /* dispõe por camada (tier), da entrada até o sistema central */
-    const camadas = {};
-    nos.forEach(n => { (camadas[n.tier] = camadas[n.tier] || []).push(n); });
-    const chaves = Object.keys(camadas).map(Number).sort((a, b) => a - b);
-    const passoY = r.h / (chaves.length + 1);
-
-    const pos = {};
-    chaves.forEach((k, ci) => {
-      const linha = camadas[k];
-      const passoX = r.w / (linha.length + 1);
-      linha.forEach((n, i) => {
-        pos[n.id] = { x: r.x + passoX * (i + 1), y: r.y + passoY * (ci + 1) };
-      });
-    });
-
-    /* ligações */
-    UI.ctx.strokeStyle = alpha(C.cyanDim, 0.55);
-    UI.ctx.lineWidth = 1;
-    nos.forEach(n => {
-      (n.links || []).forEach(l => {
-        if (!pos[n.id] || !pos[l]) return;
-        UI.ctx.beginPath();
-        UI.ctx.moveTo(pos[n.id].x, pos[n.id].y);
-        UI.ctx.lineTo(pos[l].x, pos[l].y);
-        UI.ctx.stroke();
-      });
-    });
-
-    /* nós */
-    nos.forEach((n, i) => {
-      const p = pos[n.id];
-      if (!p) return;
-      const atual = n.id === mapa.at;
-      const cor = n.kind === 'system' ? C.dangerBright
-        : n.kind === 'lock' ? C.warnBright
-        : atual ? C.cyanBright : C.accentBright;
-      const cell = UI.rect(p.x - 34, p.y - 20, 68, 40);
-      UI.fill(cell.x, cell.y, cell.w, cell.h, alpha(cor, atual ? 0.25 : 0.12));
-      UI.frameR(cell, cor, atual ? 2 : 1);
-      Text.center(UI.ctx, n.name, cell.x, cell.y + 4, cell.w, 14, FONT.labelSmall, cor);
-      Text.center(UI.ctx, n.kind, cell.x, cell.y + 20, cell.w, 14, FONT.dataSmall, C.textFaint);
-      const f = UI.hitRect(id + ':lan' + i, cell);
-      if (f & CLICK) {
-        const res = LAN.move(sv, n.id);
-        aviso(res && res.erro, 'Movido para ' + n.name);
-        Dirty.mark();
-      }
-    });
-  }
-
-  const b1 = UI.cutLeft(btsR, 150); UI.cutLeft(btsR, SPACE.sm);
-  const b2 = UI.cutLeft(btsR, 150); UI.cutLeft(btsR, SPACE.sm);
-  const b3 = UI.cutLeft(btsR, 150);
-  if (W.button(id + ':lscan', b1, 'LAN_SCAN', { primary: true })) aviso(Game.software.lanScan(), 'Varredura iniciada.');
-  if (W.button(id + ':lforce', b2, 'LAN_FORCE', { danger: true })) aviso(Game.software.lanTool('force', mapa.at), 'Arrombamento iniciado.');
-  if (W.button(id + ':lspoof', b3, 'LAN_SPOOF')) aviso(Game.software.lanTool('spoof', mapa.at), 'Falsificação iniciada.');
-}
+function telaBanco(r, sv, st) { TelaBanco.desenha(r, sv, st, id); }
+function telaRegistros(r, sv, st) { TelaRegistros.desenha(r, sv, st, id); }
+function telaLAN(r, sv, st) { TelaLAN.desenha(r, sv, st, id); }
 
 /* =========================================================
    BARREIRA
